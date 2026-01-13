@@ -1,0 +1,6 @@
+@server_HostAddress = https://localhost:7011
+
+GET {{server_HostAddress}}/movies/
+Accept: application/json
+
+###
