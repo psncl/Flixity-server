@@ -7,12 +7,27 @@ public class GetMoviesByCityHandler
 {
     public record Request(string Location);
 
-    public static async Task<Results<Ok<List<MovieInfoLlmModel>>, NotFound>> Handle(
-        [FromBody] Request request, IConfiguration config)
+    public static async Task<Results<Ok<List<MovieInfo>>, NotFound>> Handle(
+        [FromBody] Request request, IConfiguration config, IMovieInfoClient movieInfoClient)
     {
-        IMovieInfoLlmClient geminiClient = new MovieInfoGemini(config);
-        var result = await geminiClient.GetMovieListGeminiAsync(request.Location);
+        IMovieInfoLlmClient llmClient = new MovieInfoGemini(config);
+        var llmResult = await llmClient.GetMovieListGeminiAsync(request.Location);
 
-        return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        if (llmResult is null) return TypedResults.NotFound();
+
+        List<MovieInfo> moviesInfo = [];
+
+        foreach (MovieInfoLlmModel movieInfo in llmResult)
+        {
+            var fullMetadata = await GetFullMetadata(movieInfo, movieInfoClient);
+            if (fullMetadata is not null) moviesInfo.Add(fullMetadata);
+        }
+
+        return TypedResults.Ok(moviesInfo);
+    }
+
+    private static async Task<MovieInfo?> GetFullMetadata(MovieInfoLlmModel movie, IMovieInfoClient movieInfoClient)
+    {
+        return await movieInfoClient.GetMovieByTitleYearAsync(movie.Title, movie.Year);
     }
 }
