@@ -2,7 +2,7 @@ namespace server.Common.Api;
 
 public record MovieInfo(string imdbId, string title, int year, string director, string plot);
 
-public interface IGetMovieInfoClient
+public interface IMovieInfoClient
 {
     /// <summary>
     /// Search a movie API (like OMDb) for a movie by title and year.

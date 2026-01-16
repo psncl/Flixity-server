@@ -9,7 +9,7 @@ namespace server.Features.Movies.Tests;
 
 public class SearchOmdbApiTests
 {
-    private readonly IGetMovieInfoClient _mockClient = Substitute.For<IGetMovieInfoClient>();
+    private readonly IMovieInfoClient _mockClient = Substitute.For<IMovieInfoClient>();
 
     [Fact]
     public async Task SearchingForExistentMovie_ReturnsCorrectData()

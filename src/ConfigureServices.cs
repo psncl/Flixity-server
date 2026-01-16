@@ -1,4 +1,4 @@
-using server.Features.SearchMoviesOmdb;
+using server.Features.Movies;
 
 namespace server;
 
@@ -13,7 +13,7 @@ public static class ConfigureServices
 
         private void AddOmdbClient()
         {
-            builder.Services.AddHttpClient<IGetMovieInfoClient, SearchMoviesOmdbApiClient>(client =>
+            builder.Services.AddHttpClient<IMovieInfoClient, MovieInfoOmdbApiClient>(client =>
             {
                 client.BaseAddress = new Uri("https://www.omdbapi.com/");
             });

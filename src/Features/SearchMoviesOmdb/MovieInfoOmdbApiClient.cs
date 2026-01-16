@@ -1,6 +1,6 @@
-namespace server.Features.SearchMoviesOmdb;
+namespace server.Features.Movies;
 
-public class SearchMoviesOmdbApiClient : IGetMovieInfoClient
+public class MovieInfoOmdbApiClient : IMovieInfoClient
 {
     private readonly HttpClient _client;
     private readonly string? _apiKey;
@@ -14,7 +14,7 @@ public class SearchMoviesOmdbApiClient : IGetMovieInfoClient
         string Response
     );
 
-    public SearchMoviesOmdbApiClient(HttpClient client, IConfiguration configuration)
+    public MovieInfoOmdbApiClient(HttpClient client, IConfiguration configuration)
     {
         _client = client;
         _apiKey = configuration["OMDB_API_KEY"];
