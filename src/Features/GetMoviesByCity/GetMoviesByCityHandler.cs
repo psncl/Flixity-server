@@ -7,7 +7,7 @@ public class GetMoviesByCityHandler
 {
     public record Request(string Location);
 
-    public static async Task<Results<Ok<List<MovieInfoGemini.MovieInfoModel>>, NotFound>> Handle(
+    public static async Task<Results<Ok<List<MovieInfoLlmModel>>, NotFound>> Handle(
         [FromBody] Request request, IConfiguration config)
     {
         IMovieInfoLlmClient geminiClient = new MovieInfoGemini(config);

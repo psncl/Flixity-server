@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Type = Google.GenAI.Types.Type;
@@ -8,12 +7,6 @@ namespace server.Features.Movies;
 
 public class MovieInfoGemini : IMovieInfoLlmClient
 {
-    public record MovieInfoModel
-    {
-        [JsonPropertyName("title")] public string Title { get; set; }
-        [JsonPropertyName("year")] public int Year { get; set; }
-    }
-
     private readonly string? _apiKey;
 
     public MovieInfoGemini(IConfiguration configuration)
@@ -45,7 +38,7 @@ public class MovieInfoGemini : IMovieInfoLlmClient
         Items = MovieInfoLlmSchema
     };
 
-    public async Task<List<MovieInfoModel>?> GetMovieListGeminiAsync(string location)
+    public async Task<List<MovieInfoLlmModel>?> GetMovieListGeminiAsync(string location)
     {
         var client = new Client(apiKey: _apiKey);
 
@@ -53,7 +46,7 @@ public class MovieInfoGemini : IMovieInfoLlmClient
         {
             var response = await client.Models.GenerateContentAsync(
                 model: "gemini-2.5-flash",
-                contents: $"Mention 5 movies from 2000s shot in {location}.",
+                contents: $"Find 20 movies shot or set in the city {location}.",
                 config: new GenerateContentConfig
                 {
                     ResponseMimeType = "application/json",
@@ -65,7 +58,7 @@ public class MovieInfoGemini : IMovieInfoLlmClient
 
             if (responseText is null) return null;
 
-            return JsonSerializer.Deserialize<List<MovieInfoModel>>(responseText);
+            return JsonSerializer.Deserialize<List<MovieInfoLlmModel>>(responseText);
         }
         catch (HttpRequestException ex)
         {
