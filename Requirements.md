@@ -14,3 +14,4 @@
 - Rating should be shown alongside the external links whenever available.
 - Display the list of movies in a mansory layout.
   - Reference: https://bsky.app/profile/thomasbnt.dev/post/3maxyap5pus2m
+  - Individual movies could be shown in a scroll-down view like https://www.nytimes.com/interactive/2026/01/27/well/health-wellness-tips-experts.html

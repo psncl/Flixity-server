@@ -1,6 +1,8 @@
 # Things learned during this project:
 
 - Storing secrets in ASP.NET Core
+- Building the API first
+- Letting go of TDD and instead treating it as a step towards TDD by writing tests after
 
 # Tradeoffs
 
