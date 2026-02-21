@@ -13,5 +13,5 @@
 - The blurb about the locations should be about the particular city selected and be no more than 2-3 lines long.
 - Rating should be shown alongside the external links whenever available.
 - Display the list of movies in a mansory layout.
-  - Reference: https://bsky.app/profile/thomasbnt.dev/post/3maxyap5pus2m
+  - References: https://bsky.app/profile/thomasbnt.dev/post/3maxyap5pus2m | https://genderswap.fm/
   - Individual movies could be shown in a scroll-down view like https://www.nytimes.com/interactive/2026/01/27/well/health-wellness-tips-experts.html

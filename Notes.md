@@ -3,6 +3,7 @@
 - Storing secrets in ASP.NET Core
 - Building the API first
 - Letting go of TDD and instead treating it as a step towards TDD by writing tests after
+- Some topics to write about: https://open.substack.com/pub/devleaderweekly/p/side-projects-and-soft-skills-in
 
 # Tradeoffs
 
