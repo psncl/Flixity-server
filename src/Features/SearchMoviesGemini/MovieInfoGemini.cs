@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Type = Google.GenAI.Types.Type;
@@ -14,29 +15,45 @@ public class MovieInfoGemini : IMovieInfoLlmClient
         _apiKey = configuration["GEMINI_API_KEY"];
     }
 
-    private static readonly Schema MovieInfoLlmSchema = new()
-    {
-        Title = "MovieInfo",
-        Type = Type.OBJECT,
-        Properties = new Dictionary<string, Schema>
-        {
-            {
-                "title", new Schema { Type = Type.STRING, Title = "English title of the movie" }
-            },
-            {
-                "year", new Schema { Type = Type.INTEGER, Title = "Release year of the movie" }
-            }
-        },
-        PropertyOrdering = new List<string> { "title", "year" },
-        Required = new List<string> { "title", "year" }
-    };
+    // private static readonly Schema MovieInfoLlmSchema = new()
+    // {
+    //     Title = "MovieInfo",
+    //     Type = Type.OBJECT,
+    //     Properties = new Dictionary<string, Schema>
+    //     {
+    //         {
+    //             "title", new Schema { Type = Type.STRING, Title = "English title of the movie" }
+    //         },
+    //         {
+    //             "year", new Schema { Type = Type.INTEGER, Title = "Release year of the movie" }
+    //         }
+    //     },
+    //     PropertyOrdering = new List<string> { "title", "year" },
+    //     Required = new List<string> { "title", "year" }
+    // };
 
-    private static readonly Schema MovieList = new()
+    private static string MovieInfoLlmSchemaString = @"
     {
-        Title = "MovieList",
-        Type = Type.ARRAY,
-        Items = MovieInfoLlmSchema
-    };
+        ""type"": ""object"",
+        ""properties"": {
+            ""title"": {""type"": ""string"", ""title"": ""English title of the movie""},
+            ""year"": {""type"": ""integer"", ""title"": ""Release year of the movie""}
+        },
+        ""required"": [""title"", ""year""]
+    }";
+
+    // private static readonly Schema MovieList = new()
+    // {
+    //     Title = "MovieList",
+    //     Type = Type.ARRAY,
+    //     Items = MovieInfoLlmSchema
+    // };
+
+    private static string MovieListSchemaString = @"
+    {
+        ""type"": ""array"",
+        ""items"": ""MovieInfoLlmSchemaString""
+    }";
 
     public async Task<List<MovieInfoLlmModel>?> GetMovieListGeminiAsync(string location)
     {
@@ -50,7 +67,7 @@ public class MovieInfoGemini : IMovieInfoLlmClient
                 config: new GenerateContentConfig
                 {
                     ResponseMimeType = "application/json",
-                    ResponseSchema = MovieList
+                    ResponseJsonSchema = JsonNode.Parse(MovieListSchemaString)
                 }
             );
 
