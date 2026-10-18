@@ -8,11 +8,13 @@ namespace server.Features.Movies;
 
 public class MovieInfoGemini : IMovieInfoLlmClient
 {
-    private readonly string? _apiKey;
+    private readonly Client _client;
 
-    public MovieInfoGemini(IConfiguration configuration)
+    // Client is injected as a singleton: each Client owns its own HttpClient,
+    // so creating one per request would leak sockets.
+    public MovieInfoGemini(Client client)
     {
-        _apiKey = configuration["GEMINI_API_KEY"];
+        _client = client;
     }
 
     // private static readonly Schema MovieInfoLlmSchema = new()
@@ -57,11 +59,9 @@ public class MovieInfoGemini : IMovieInfoLlmClient
 
     public async Task<List<MovieInfoLlmModel>?> GetMovieListGeminiAsync(string location)
     {
-        var client = new Client(apiKey: _apiKey);
-
         try
         {
-            var response = await client.Models.GenerateContentAsync(
+            var response = await _client.Models.GenerateContentAsync(
                 model: "gemini-2.5-flash",
                 contents: $"Find 20 movies shot or set in the city {location}.",
                 config: new GenerateContentConfig

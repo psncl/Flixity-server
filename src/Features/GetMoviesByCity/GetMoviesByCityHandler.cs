@@ -8,9 +8,8 @@ public class GetMoviesByCityHandler
     public record Request(string Location);
 
     public static async Task<Results<Ok<List<MovieInfo>>, NotFound>> Handle(
-        [FromBody] Request request, IConfiguration config, IMovieInfoClient movieInfoClient)
+        [FromBody] Request request, IMovieInfoLlmClient llmClient, IMovieInfoClient movieInfoClient)
     {
-        IMovieInfoLlmClient llmClient = new MovieInfoGemini(config);
         var llmResult = await llmClient.GetMovieListGeminiAsync(request.Location);
 
         if (llmResult is null) return TypedResults.NotFound();
