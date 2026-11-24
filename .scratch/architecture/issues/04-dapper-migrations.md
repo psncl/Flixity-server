@@ -1,7 +1,7 @@
 # How are schema migrations run with Dapper + Postgres?
 
 Type: research
-Status: resolved
+Status: superseded (2026-11-24: EF Core Migrations as a deploy step; see `openspec/changes/add-city-lookup/design.md`)
 Blocked by: 
 
 ## Question
