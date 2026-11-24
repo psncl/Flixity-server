@@ -17,4 +17,11 @@ public interface ICityGeocoder
     /// <exception cref="GeocoderUnavailableException">The geocoder failed, timed out or refused the request.</exception>
     public Task<IReadOnlyList<CityInfo>> SearchAsync(string name, string language,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get one City, with its names in English.
+    /// </summary>
+    /// <returns>The City, or null if the ID is unknown or is not a City.</returns>
+    /// <exception cref="GeocoderUnavailableException">The geocoder failed, timed out or refused the request.</exception>
+    public Task<CityInfo?> GetByIdAsync(int geoNamesId, CancellationToken cancellationToken = default);
 }

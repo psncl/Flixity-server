@@ -19,7 +19,7 @@ Id (Primary key)
 ImdbId (Unique)
 Title
 Year
-Director
+Director (nullable)
 Plot (nullable)
 PosterUrl (nullable)
 ImdbRating, RottenTomatoes, Metascore (nullable)

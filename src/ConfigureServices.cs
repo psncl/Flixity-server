@@ -1,5 +1,9 @@
-using Google.GenAI;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
+using OpenAI;
 using server.Common.Database;
 using server.Features.Cities;
 using server.Features.Movies;
@@ -15,7 +19,18 @@ public static class ConfigureServices
             builder.AddDatabase();
             builder.AddGeocoder();
             builder.AddOmdbClient();
-            builder.AddGeminiClient();
+            builder.AddLlmClient();
+            builder.AddCityMovieSearch();
+        }
+
+        private void AddCityMovieSearch()
+        {
+            builder.Services.AddScoped<CityMovieStore>();
+            builder.Services.AddScoped<CityMovieFinder>();
+            // Shared by all requests
+            builder.Services.AddSingleton<CitySearchLocks>();
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddSingleton<UncachedSearchLimiter>();
         }
 
         private void AddGeocoder()
@@ -43,16 +58,49 @@ public static class ConfigureServices
 
         private void AddOmdbClient()
         {
+            builder.Services.AddOptions<OmdbOptions>().Configure<IConfiguration>((options, configuration) =>
+                options.ApiKey = configuration["OMDB_API_KEY"] ?? "");
+
             builder.Services.AddHttpClient<IMovieInfoClient, MovieInfoOmdbApiClient>(client =>
             {
                 client.BaseAddress = new Uri("https://www.omdbapi.com/");
+                client.Timeout = TimeSpan.FromSeconds(5);
             });
         }
 
-        private void AddGeminiClient()
+        private void AddLlmClient()
         {
-            builder.Services.AddSingleton(_ => new Client(apiKey: builder.Configuration["GEMINI_API_KEY"]));
-            builder.Services.AddSingleton<IMovieInfoLlmClient, MovieInfoGemini>();
+            builder.Services.AddOptions<LlmOptions>()
+                .BindConfiguration("Llm")
+                .Validate(options => options.Provider == LlmOptions.OpenAi,
+                    $"Llm:Provider is not supported. Supported providers: {LlmOptions.OpenAi}.")
+                .Validate(options => options.Model != "", "Llm:Model is missing.")
+                .ValidateOnStart();
+
+            // To add a provider, choose its IChatClient here by options.Provider.
+            // One client is shared, because each one can own network connections.
+            builder.Services.AddSingleton<IChatClient>(services =>
+            {
+                var options = services.GetRequiredService<IOptions<LlmOptions>>().Value;
+                var apiKey = services.GetRequiredService<IConfiguration>()["OPENAI_API_KEY"];
+                if (string.IsNullOrEmpty(apiKey))
+                    throw new InvalidOperationException("OPENAI_API_KEY is missing. See README.md.");
+
+                var clientOptions = new OpenAIClientOptions
+                {
+                    // MovieInfoLlmClient does the retries and the timeout.
+                    RetryPolicy = new ClientRetryPolicy(maxRetries: 0),
+                    NetworkTimeout = Timeout.InfiniteTimeSpan
+                };
+                return new OpenAIClient(new ApiKeyCredential(apiKey), clientOptions)
+                    .GetChatClient(options.Model)
+                    .AsIChatClient();
+            });
+
+            // Created when first used, so that cached searches work without an API key.
+            builder.Services.AddSingleton(services =>
+                new Lazy<IChatClient>(services.GetRequiredService<IChatClient>));
+            builder.Services.AddSingleton<IMovieInfoLlmClient, MovieInfoLlmClient>();
         }
     }
 }

@@ -36,7 +36,7 @@ The system SHALL give each Movie a Blurb about the searched City of at most 300 
 
 #### Scenario: Overlong Blurb
 - **WHEN** a generated Blurb exceeds 300 characters
-- **THEN** it is shortened at a word boundary to at most 300 characters
+- **THEN** it is shortened to at most 300 characters, at a word boundary unless that would lose more than half, without splitting a character
 
 #### Scenario: Same Movie in two Cities
 - **WHEN** one Movie is found for two Cities
@@ -51,7 +51,7 @@ The system MUST drop a suggestion unless the metadata source returns a movie wit
 
 #### Scenario: Year differs by one
 - **WHEN** "Amélie" from 2001 is suggested and the metadata source lists "Amélie" from 2002
-- **THEN** the Movie is included with the year 2002
+- **THEN** the Movie is included with the year 2001
 
 #### Scenario: Different title returned
 - **WHEN** "Quantum of Solace" is suggested and only "Quantum of Solace: Director Marc Forster" is returned
@@ -91,20 +91,32 @@ The system SHALL generate a City's result at most once when simultaneous searche
 - **WHEN** two clients search the same new City at once
 - **THEN** Movies are requested once and both clients receive the same result
 
+#### Scenario: Simultaneous searches without a saved result
+- **WHEN** a search fails, is partial or finds no such City while other searches of that City wait for it
+- **THEN** the waiting searches receive the same outcome, and nothing is generated again for them
+
+#### Scenario: First client leaves
+- **WHEN** the client whose search is generating the result disconnects while another waits
+- **THEN** the waiting search generates the result
+
 #### Scenario: Two Cities share a new Movie
 - **WHEN** simultaneous searches of two Cities find the same new Movie
 - **THEN** both searches succeed and the Movie is stored once
 
 ### Requirement: Return partial results without saving them
-The system SHALL return the confirmed Movies with `partial` true, and save nothing, when a metadata lookup fails for a reason other than not finding the movie.
+The system SHALL return the confirmed Movies with `partial` true, and save nothing, when a metadata lookup that could have changed the result fails for a reason other than not finding the movie.
 
 #### Scenario: One lookup fails
 - **WHEN** one lookup keeps failing after retries and others succeed
 - **THEN** the response is 200 with the confirmed Movies and `partial` true, and the next search generates again
 
+#### Scenario: Irrelevant failure
+- **WHEN** 10 Movies are confirmed and a lookup of a later suggestion fails
+- **THEN** the result is complete and saved
+
 #### Scenario: Quota used up
 - **WHEN** the metadata source refuses a request because of its quota
-- **THEN** it is not retried, no further lookups start, and the result is partial
+- **THEN** it is not retried, no further Movies are looked up, lookups under way can finish, and the result is partial
 
 #### Scenario: Temporary failure
 - **WHEN** a lookup fails temporarily and then succeeds on a retry
@@ -145,7 +157,7 @@ The system MUST obtain the name of a City that is not stored from the geocoder b
 - **THEN** the response is 503 ProblemDetails and nothing is saved
 
 ### Requirement: Limit uncached searches per IP
-The system SHALL allow 20 searches that are not served from saved results per IP address in each 60-minute window, and reject further ones with 429 ProblemDetails and `Retry-After`.
+The system SHALL allow 20 searches that are not served from saved results per IP address in each 60-minute window, and reject further ones with 429 ProblemDetails and a `Retry-After` of the time left. IPv6 addresses in one /64 network count as one address.
 
 #### Scenario: Limit exceeded
 - **WHEN** an IP address that has used its 20 uncached searches searches another City that is not saved
@@ -164,12 +176,20 @@ The system SHALL allow 20 searches that are not served from saved results per IP
 - **THEN** it counts towards the limit
 
 #### Scenario: Waiting for another search
-- **WHEN** a search waits for a simultaneous search of the same City and receives its saved result
+- **WHEN** a search waits for a simultaneous search of the same City and receives its result or outcome
 - **THEN** the waiting search does not count towards the limit
 
 #### Scenario: Other endpoints
 - **WHEN** an IP address has reached the limit
 - **THEN** city suggestions and featured Cities still work for it
+
+#### Scenario: Time left
+- **WHEN** a client is rejected 59 minutes into its window
+- **THEN** `Retry-After` is at most 60 seconds
+
+#### Scenario: Same IPv6 network
+- **WHEN** a client uses several addresses in one /64 network
+- **THEN** their uncached searches share one limit
 
 #### Scenario: Different IP address
 - **WHEN** one IP address has reached the limit

@@ -7,8 +7,8 @@ The owner is a junior .NET developer building this to learn. Explain non-obvious
 ## Stack
 
 - .NET 10 ASP.NET Core minimal API (`src/server.csproj`), OpenAPI + Scalar for docs
-- Google Gen AI .NET SDK (Gemini) to get movies for a location (chosen over MS Agent Framework for simplicity)
-- OMDb API for full movie metadata
+- `Microsoft.Extensions.AI` (`IChatClient`) to get movies for a City; provider and model set in `appsettings.json` (OpenAI `gpt-6-luna`)
+- OMDb API for movie metadata, and to verify that suggested movies exist
 - Secrets via ASP.NET Core user secrets
 - Postgres with EF Core (Npgsql provider 10.0.x; 11.x needs .NET 11); local setup in `README.md`
 - Open-Meteo geocoding to identify Cities; built-in `AddValidation()` and ProblemDetails
@@ -17,7 +17,6 @@ The owner is a junior .NET developer building this to learn. Explain non-obvious
 Planned, not yet in code (see `openspec/changes/`):
 
 - Running migrations as a deploy step
-- `Microsoft.Extensions.AI` (`IChatClient`) with a configurable provider, starting with OpenAI `gpt-6-luna`, replacing Gemini
 - Azure App Service hosting
 
 ## Planning
@@ -28,19 +27,19 @@ Plans live in `openspec/`: current behaviour in `specs/`, planned changes in `ch
 
 Vertical slice architecture: code is grouped by feature under `src/Features/`, shared abstractions in `src/Common/Api/`.
 
-- `SearchCities`, `GetFeaturedCities`, `GetMovies`, `GetMoviesByCity`: endpoints, each with a handler
+- `SearchCities`, `GetFeaturedCities`, `SearchCityMovies`: endpoints, each with a handler
 - `GeocodeOpenMeteo`: geocoder client (`ICityGeocoder`)
 - Database model, seed data and migrations: `src/Common/Database/`
-- `SearchMoviesGemini`: LLM client (`IMovieInfoLlmClient`)
+- `SearchMoviesLlm`: LLM client (`IMovieInfoLlmClient`)
 - `SearchMoviesOmdb`: OMDb client (`IMovieInfoClient`)
 - Endpoints are registered in `src/Endpoints.cs`; services in `src/ConfigureServices.cs`
 - Tests: `tests/UnitTests`, `tests/IntegrationTests`
 
 ## Current state
 
-- Flow in place: city -> Gemini suggests movies -> OMDb fills in full metadata -> returned as a list.
+- City movie search in place: GeoNames ID -> saved result, or LLM suggests movies with blurbs -> OMDb verifies and fills in metadata -> saved permanently and returned. Partial results are not saved.
 - City lookup in place: suggestions from Open-Meteo, featured Cities from Postgres.
-- Not started: Movie and FilmingLocation entities, location blurbs, external links and ratings, frontend.
+- Not started: external links and ratings, observability, deployment, frontend.
 
 ## Commands
 

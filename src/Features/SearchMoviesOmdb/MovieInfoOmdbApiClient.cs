@@ -1,35 +1,111 @@
+using System.Net;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
+
 namespace server.Features.Movies;
 
-public class MovieInfoOmdbApiClient : IMovieInfoClient
+public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOptions> options) : IMovieInfoClient
 {
-    private readonly HttpClient _client;
-    private readonly string? _apiKey;
-
     private record OmdbApiResponse(
-        string Title,
-        string Year,
-        string Director,
-        string imdbID,
-        string Plot,
-        string Response
+        string? Title,
+        string? Year,
+        string? Type,
+        string? Director,
+        string? Plot,
+        string? Poster,
+        [property: JsonPropertyName("imdbID")] string? ImdbId,
+        string? Response,
+        string? Error
     );
 
-    public MovieInfoOmdbApiClient(HttpClient client, IConfiguration configuration)
+    public async Task<MovieInfo?> FindMovieAsync(string title, int year, CancellationToken cancellationToken = default)
     {
-        _client = client;
-        _apiKey = configuration["OMDB_API_KEY"];
+        // Look up without the year as well, because OMDb's year can differ from the one we have.
+        return await FindAsync($"t={Uri.EscapeDataString(title)}&y={year}") ??
+               await FindAsync($"t={Uri.EscapeDataString(title)}");
+
+        async Task<MovieInfo?> FindAsync(string query)
+        {
+            var movie = ToMovie(await GetWithRetriesAsync(query, cancellationToken));
+            if (movie is null || !MovieMatch.IsMatch(title, year, movie.Title, movie.Year)) return null;
+
+            // OMDb's year is often one later than the original release, so keep the one asked for.
+            return movie with { Year = year };
+        }
     }
 
-    public async Task<MovieInfo?> GetMovieByTitleYearAsync(string title, int year)
+    private static MovieInfo? ToMovie(OmdbApiResponse? response)
     {
-        var response = await _client.GetAsync($"?apikey={_apiKey}&t={title}&y={year}&type=movie");
+        if (response is null || response.Type != "movie") return null;
+        if (string.IsNullOrEmpty(response.ImdbId) || string.IsNullOrEmpty(response.Title)) return null;
+
+        // Some years are ranges, e.g. "2001–2003".
+        var year = FirstYear().Match(response.Year ?? "");
+        if (!year.Success) return null;
+
+        return new MovieInfo(response.ImdbId, response.Title, int.Parse(year.Value), NullIfMissing(response.Director),
+            NullIfMissing(response.Plot), NullIfMissing(response.Poster));
+    }
+
+    private static string? NullIfMissing(string? value) =>
+        string.IsNullOrWhiteSpace(value) || value == "N/A" ? null : value;
+
+    [GeneratedRegex("^[0-9]{4}")]
+    private static partial Regex FirstYear();
+
+    private async Task<OmdbApiResponse?> GetWithRetriesAsync(string query, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0;; attempt++)
+        {
+            try
+            {
+                return await GetAsync(query, cancellationToken);
+            }
+            // A timeout also throws OperationCanceledException, but then the caller hasn't cancelled.
+            catch (Exception ex) when (IsTemporary(ex) && !cancellationToken.IsCancellationRequested)
+            {
+                if (attempt == options.Value.RetryDelays.Length)
+                    throw new MovieInfoUnavailableException("The movie lookup kept failing.", inner: ex);
+
+                await Task.Delay(options.Value.RetryDelays[attempt], cancellationToken);
+            }
+        }
+    }
+
+    private static bool IsTemporary(Exception ex) => ex switch
+    {
+        OperationCanceledException => true, // Timeout
+        HttpRequestException { StatusCode: null } => true, // No connection
+        HttpRequestException { StatusCode: { } status } => (int)status >= 500,
+        _ => false
+    };
+
+    /// <returns>Null if OMDb has no such movie.</returns>
+    private async Task<OmdbApiResponse?> GetAsync(string query, CancellationToken cancellationToken)
+    {
+        var apiKey = Uri.EscapeDataString(options.Value.ApiKey);
+        using var response = await client.GetAsync($"?apikey={apiKey}&type=movie&{query}", cancellationToken);
+
+        // OMDb uses 401 both for an invalid key and for a used-up daily quota. Retrying helps with neither.
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            throw new MovieInfoUnavailableException("OMDb refused the request.", refused: true);
+        if ((int)response.StatusCode is >= 400 and < 500)
+            throw new MovieInfoUnavailableException($"OMDb returned {(int)response.StatusCode}.");
         response.EnsureSuccessStatusCode();
-        var omdbResponse = await response.Content.ReadFromJsonAsync<OmdbApiResponse>();
 
-        // Omdb API returns {"Response":"False","Error":"Movie not found!"} if the search failed
-        if (omdbResponse == null || omdbResponse.Response == "False") return null;
+        try
+        {
+            var movie = await response.Content.ReadFromJsonAsync<OmdbApiResponse>(cancellationToken);
+            if (movie?.Response == "True") return movie;
+            if (movie is { Response: "False", Error: "Movie not found!" }) return null;
 
-        return new MovieInfo(omdbResponse.imdbID, omdbResponse.Title, Convert.ToInt32(omdbResponse.Year),
-            omdbResponse.Director, omdbResponse.Plot);
+            throw new MovieInfoUnavailableException("OMDb returned an unexpected response.");
+        }
+        catch (JsonException ex)
+        {
+            throw new MovieInfoUnavailableException("OMDb returned invalid data.", inner: ex);
+        }
     }
 }

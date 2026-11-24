@@ -8,12 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Google.GenAI" Version="1.26.1" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.AI" Version="10.11.1" />
+        <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.11.1" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.18.0" />
     </ItemGroup>
