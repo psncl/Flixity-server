@@ -1,0 +1,41 @@
+schema: spec-driven
+
+context: |
+  Fixed constraints: Postgres with EF Core on .NET 10; API on a single Azure App Service instance.
+  LLM access must stay provider-switchable; start with OpenAI's cheapest suitable GPT-6 model.
+  Learning project with low traffic: prefer simple choices and keep running costs low.
+  The owner is a junior .NET developer: explain non-obvious tradeoffs briefly.
+  Use the domain terms in GLOSSARY.md. Regions and landscapes are not Cities.
+  Automated tests use xUnit and FluentAssertions and never call real external APIs.
+  Out of scope: user accounts, favourites, admin UI, frontend implementation, CI/CD pipelines.
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

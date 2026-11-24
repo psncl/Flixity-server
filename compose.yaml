@@ -1,0 +1,22 @@
+# Local development database only. Production runs on Azure.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: flixity
+      POSTGRES_USER: flixity
+      POSTGRES_PASSWORD: flixity-local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flixity -d flixity"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    ports:
+      # Host port 5433 avoids clashing with other Postgres containers.
+      # 127.0.0.1 keeps it unreachable from other machines.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - flixity-db:/var/lib/postgresql/data
+
+volumes:
+  flixity-db:
