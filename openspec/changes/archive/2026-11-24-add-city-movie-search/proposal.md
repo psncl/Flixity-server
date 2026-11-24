@@ -11,7 +11,8 @@ Users need the Movies filmed in a chosen City, with a Blurb for each. Results sh
 - Generate titles and Blurbs in one LLM call, without web search. Blurbs are labelled as AI-generated in the UI.
 - Make the LLM provider and model switchable; start with OpenAI `gpt-6-luna` instead of Gemini.
 - Define behaviour for LLM, OMDb and geocoder failures, partial results and empty results.
-- Rate limit searches per IP.
+- Verify each movie's title and year against OMDb, and drop those that do not match.
+- Limit each IP to 20 uncached searches per 60 minutes. Cached searches are unlimited.
 - **BREAKING**: remove `GET /movies` and `POST /movies/search`.
 
 ## Capabilities

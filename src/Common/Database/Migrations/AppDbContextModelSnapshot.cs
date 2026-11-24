@@ -363,6 +363,86 @@ namespace server.Common.Database.Migrations
                             Region = "Dubrovnik-Neretva County"
                         });
                 });
+
+            modelBuilder.Entity("server.Common.Database.FilmingLocation", b =>
+                {
+                    b.Property<int>("CityId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Blurb")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CityId", "MovieId");
+
+                    b.HasIndex("MovieId");
+
+                    b.ToTable("FilmingLocations");
+                });
+
+            modelBuilder.Entity("server.Common.Database.Movie", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Director")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("FetchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImdbId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Plot")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PosterUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImdbId")
+                        .IsUnique();
+
+                    b.ToTable("Movies");
+                });
+
+            modelBuilder.Entity("server.Common.Database.FilmingLocation", b =>
+                {
+                    b.HasOne("server.Common.Database.City", "City")
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("server.Common.Database.Movie", "Movie")
+                        .WithMany()
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("City");
+
+                    b.Navigation("Movie");
+                });
 #pragma warning restore 612, 618
         }
     }

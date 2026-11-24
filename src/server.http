@@ -1,6 +1,17 @@
 @server_HostAddress = https://localhost:7011
 
-GET {{server_HostAddress}}/movies/
+GET {{server_HostAddress}}/cities/featured
+Accept: application/json
+
+###
+
+GET {{server_HostAddress}}/cities?query=paris
+Accept: application/json
+
+###
+
+# The first search of a city costs money (one LLM call).
+POST {{server_HostAddress}}/cities/2988507/search
 Accept: application/json
 
 ###

@@ -9,7 +9,6 @@ public static class Endpoints
     {
         GetFeaturedCities.Map(app);
         SearchCities.Map(app);
-        GetMovies.Map(app);
-        GetMoviesByCity.Map(app);
+        SearchCityMovies.Map(app);
     }
 }
