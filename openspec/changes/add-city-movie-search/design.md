@@ -2,7 +2,7 @@
 
 ## Context
 
-Builds on City and the test setup from `add-city-lookup`. The current search asks Gemini for movies "shot or set" in a city, sends an item schema as literal text, and fails entirely on one OMDb HTTP error.
+Builds on City and the test setup from `add-city-lookup`. The current search asks Gemini for movies "shot or set" in a city, sends an item schema as literal text, and fails entirely on one OMDb HTTP error or malformed LLM response. OMDb titles are not URL-encoded, so titles containing `&` or `#` are looked up wrongly; fix and test this.
 
 ## Goals / Non-Goals
 

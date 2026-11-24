@@ -10,7 +10,7 @@ Movies are cached permanently per City, so free text such as "paris" must resolv
 - Add `GET /cities?query=` returning matching Cities for the user to pick from.
 - Add `GET /cities/featured` returning curated UK and European Cities.
 - Report invalid input and upstream failures as ProblemDetails.
-- Leave existing movie endpoints unchanged; `add-city-movie-search` removes them.
+- Keep existing movie endpoints working until `add-city-movie-search` removes them. App-wide validation and ProblemDetails also apply to them: `GET /movies` rejects an empty title, and errors have a ProblemDetails body.
 
 ## Capabilities
 

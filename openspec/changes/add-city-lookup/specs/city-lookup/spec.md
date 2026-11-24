@@ -40,8 +40,23 @@ The system MUST reject a query that, after trimming whitespace, is missing, shor
 - **WHEN** a client requests suggestions for 101 characters
 - **THEN** the response is 400 ProblemDetails
 
+### Requirement: Report invalid queries in one format
+The system SHALL report an invalid query as ProblemDetails whatever response format the client prefers.
+
+#### Scenario: Client prefers HTML
+- **WHEN** a client that accepts only HTML sends an invalid query
+- **THEN** the response is 400 with content type `application/problem+json`
+
 ### Requirement: Suggest only populated places
-The system MUST exclude geocoder results that are not populated places, because regions and landscapes are not Cities.
+The system MUST exclude geocoder results that are not currently populated places in their own right. Regions, landscapes, abandoned, historical or destroyed places, and sections of a city are not Cities.
+
+#### Scenario: Section of a city
+- **WHEN** the geocoder returns a city and a section of that city
+- **THEN** only the city is suggested
+
+#### Scenario: Abandoned place
+- **WHEN** the geocoder returns a place marked as abandoned, historical or destroyed
+- **THEN** it is not suggested
 
 #### Scenario: Non-city result
 - **WHEN** the geocoder returns a mountain alongside a city

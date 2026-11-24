@@ -32,7 +32,7 @@ It needs no key, returns GeoNames IDs and supports localized names. Alternatives
 Checked on 2026-11-24:
 - `/v1/search` omits `results` entirely when nothing matches.
 - `language=fr` finds London for "Londres"; English does not.
-- Populated places in the sampled results have feature codes beginning with `PPL`; filter on that prefix.
+- Populated places in the sampled results have feature codes beginning with `PPL`. Filter on that prefix, excluding PPLQ, PPLH, PPLCH and PPLW (abandoned, historical, historical capital, destroyed) and PPLX (section of a city). Sections would split one city's movies into several paid searches.
 - `/v1/get?id=` returns one place. An unknown ID returns **400** with reason "Location ID not found.", so `add-city-movie-search` must map that to 404.
 
 Request more than 10 results, then filter, so filtering does not shorten the list unnecessarily.
@@ -47,7 +47,7 @@ Development uses `dotnet ef database update`. Production uses a reviewed script 
 
 ### Featured Cities are seeded rows
 
-They are seeded through migrations, avoiding a second list to maintain. The owner approved these 30 on 2026-11-24. IDs were looked up the same day:
+They are seeded through migrations, avoiding a second list to maintain. Seeds use negative IDs, so they can't clash with the positive IDs generated for searched Cities. The owner approved these 30 on 2026-11-24. IDs were looked up the same day:
 
 | Country | City and GeoNames ID |
 |---|---|
@@ -70,7 +70,7 @@ They are seeded through migrations, avoiding a second list to maintain. The owne
 
 ### Built-in validation
 
-Use .NET 10 `AddValidation()` and `AddProblemDetails()`. Trimming must happen before the length check. Make missing-parameter failures produce ProblemDetails in every environment, since binding failures bypass validation. FluentValidation was rejected for now because inputs are simple; reconsider for complex bodies or cross-field rules.
+Use .NET 10 `AddValidation()` and `AddProblemDetails()`. Trimming must happen before the length check. Make missing-parameter failures produce ProblemDetails in every environment, since binding failures bypass validation. Validation also skips a missing nullable parameter, so `query` is non-nullable. A fallback writer covers clients whose Accept header excludes JSON, which the built-in writer refuses. FluentValidation was rejected for now because inputs are simple; reconsider for complex bodies or cross-field rules.
 
 ### Tests
 
@@ -82,6 +82,8 @@ Use .NET 10 `AddValidation()` and `AddProblemDetails()`. Trimming must happen be
 ## Risks / Trade-offs
 
 - [Open-Meteo's free tier is non-commercial, under 10,000 calls/day, and may count shared App Service IPs together] → debounce in the frontend, return 503 on quota errors, keep it behind an interface.
+- [GeoNames labels a few large places as sections, such as Springs in South Africa, so they can't be found] → accepted.
+- [Featuring a City that users have already searched breaks an ordinary seed insert] → write later seed migrations as upserts on GeoNamesId.
 - [Tiny villages clutter suggestions] → consider a population minimum once results can be seen.
 - [Non-English matching is incomplete] → pass the browser language.
 - [Integration tests need Docker] → keep them in a separate project from unit tests.
