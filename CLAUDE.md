@@ -21,7 +21,7 @@ Planned, not yet in code (see `openspec/changes/`):
 
 ## Planning
 
-Plans live in `openspec/`: current behaviour in `specs/`, planned changes in `changes/`, finished ones in `changes/archive/`. `add-city-lookup` is done. Build the rest in this order: `add-city-movie-search`, `add-movie-links-and-ratings` and `add-observability`, then `deploy-to-azure`. These have a proposal and design only, so write their specs and tasks (as applicable) before building.
+Plans live in `openspec/`: current behaviour in `specs/`, planned changes in `changes/`, finished ones in `changes/archive/`. `add-city-lookup` and `add-city-movie-search` are done. Build the rest in this order: `add-movie-links-and-ratings` and `add-observability`, then `deploy-to-azure`. These have a proposal and design only, so write their specs and tasks (as applicable) before building.
 
 ## Structure
 
