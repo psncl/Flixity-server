@@ -7,10 +7,10 @@ Users should be able to open a Movie on IMDb, Rotten Tomatoes, Metacritic, MUBI 
 ## What Changes
 
 - Add links to each Movie, marking those that fall back to a site search.
-- Add IMDb, Rotten Tomatoes and Metacritic ratings where available.
+- Add IMDb and Metacritic ratings where available.
 - Save ratings when the Movie is first added; they are never refreshed.
 - Keep searches working when link lookup fails; missing IDs fall back to search links and are not backfilled.
-- Hide Rotten Tomatoes scores that have only a search link.
+- Rotten Tomatoes gets a link only, with no score.
 
 ## Capabilities
 

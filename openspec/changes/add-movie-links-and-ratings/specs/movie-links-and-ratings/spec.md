@@ -48,11 +48,11 @@ The system SHALL link to the site's search for the Movie's title, with `isSearch
 - **THEN** the complete title is encoded so that the search is for the whole title
 
 ### Requirement: Show available ratings
-The system SHALL return the IMDb rating as `x.x/10`, the Rotten Tomatoes Tomatometer as `n%` and the Metascore as `n/100`, and a null rating when it is unavailable. Letterboxd and MUBI ratings SHALL always be null.
+The system SHALL return the IMDb rating as `x.x/10` and the Metascore as `n/100`, and a null rating when it is unavailable. Rotten Tomatoes, Letterboxd and MUBI ratings SHALL always be null.
 
 #### Scenario: All ratings available
-- **WHEN** a Movie has IMDb rating 8.8, Tomatometer 79 and Metascore 67, and its Rotten Tomatoes ID is known
-- **THEN** the ratings are `8.8/10`, `79%` and `67/100`, and Letterboxd and MUBI have null ratings
+- **WHEN** a Movie has IMDb rating 8.8 and Metascore 67, and its Rotten Tomatoes ID is known
+- **THEN** the IMDb and Metacritic ratings are `8.8/10` and `67/100`, and Rotten Tomatoes, Letterboxd and MUBI have null ratings
 
 #### Scenario: Rating unavailable
 - **WHEN** the metadata source has no Metascore for a Movie
@@ -61,13 +61,6 @@ The system SHALL return the IMDb rating as `x.x/10`, the Rotten Tomatoes Tomatom
 #### Scenario: Unreadable rating
 - **WHEN** the metadata source returns a rating that cannot be read as a number
 - **THEN** that rating is null and the Movie is still returned
-
-### Requirement: Show Rotten Tomatoes scores only with a direct link
-The system MUST return a null Rotten Tomatoes rating when the Rotten Tomatoes link is a search, because Rotten Tomatoes requires scores to link to the movie's own page.
-
-#### Scenario: Score with a search link
-- **WHEN** a Movie has a Tomatometer of 79 but no known Rotten Tomatoes ID
-- **THEN** its Rotten Tomatoes link is a search with a null rating
 
 ### Requirement: Keep links and ratings from the first search
 The system SHALL save a Movie's site IDs and ratings when the Movie is first stored, and SHALL NOT refresh them.

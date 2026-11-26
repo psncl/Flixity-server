@@ -24,4 +24,8 @@
 
 ## 5. Integration check
 
-- [ ] 5.1 Run all tests, then search two Cities not yet saved using the real services; verify with the owner that direct links open the right pages and search links find the Movie
+- [x] 5.1 Run all tests, then search two Cities not yet saved using the real services; verify with the owner that direct links open the right pages and search links find the Movie
+
+## 6. Rotten Tomatoes links only
+
+- [ ] 6.1 Drop the RottenTomatoes column with a migration, stop reading the Rotten Tomatoes entry from OMDb, and always return a null Rotten Tomatoes rating; update `Entities.md`; verify unit tests for the ratings scenarios in the spec and that all tests pass
