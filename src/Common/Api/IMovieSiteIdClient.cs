@@ -12,7 +12,10 @@ public interface IMovieSiteIdClient
     /// <summary>Find the site IDs of several Movies in one request.</summary>
     /// <param name="imdbIds">IMDb IDs, such as "tt0137523". IDs in any other format are skipped.</param>
     /// <param name="cancellationToken">Cancels the lookup</param>
-    /// <returns>Site IDs by IMDb ID. Movies the source doesn't know are left out.</returns>
+    /// <returns>
+    /// Site IDs by IMDb ID. Movies the source doesn't know are left out. Empty if the source fails,
+    /// because missing IDs only mean search links: it never throws except when cancelled.
+    /// </returns>
     public Task<IReadOnlyDictionary<string, MovieSiteIds>> FindSiteIdsAsync(IReadOnlyCollection<string> imdbIds,
         CancellationToken cancellationToken = default);
 }

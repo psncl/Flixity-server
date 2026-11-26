@@ -12,7 +12,7 @@
 ## 3. Site IDs from Wikidata
 
 - [x] 3.1 Add a Wikidata client (its own slice and interface) that sends one SPARQL query for a list of IMDb IDs and returns their Rotten Tomatoes, Metacritic, Letterboxd and MUBI IDs, with a descriptive User-Agent and no key; verify unit tests with fake HTTP responses for found, partly found and unknown IDs, and that the request carries the User-Agent and every IMDb ID
-- [ ] 3.2 Retry once on a temporary failure or a 429 with `Retry-After` of at most 5 seconds, with a 10-second timeout per attempt, and report failure as an empty result; verify unit tests for failure then success, two failures, a timeout, and a 429 with a long `Retry-After` that is not retried
+- [x] 3.2 Retry once on a temporary failure or a 429 with `Retry-After` of at most 5 seconds, with a 10-second timeout per attempt, and report failure as an empty result; verify unit tests for failure then success, two failures, a timeout, and a 429 with a long `Retry-After` that is not retried
 - [ ] 3.3 Register the client and its settings, and document Wikidata in `README.md` and `CLAUDE.md`; verify the app starts with the documented setup
 
 ## 4. Links in the search
