@@ -39,9 +39,9 @@ Vertical slice architecture: code is grouped by feature under `src/Features/`, s
 
 ## Current state
 
-- City movie search in place: GeoNames ID -> saved result, or LLM suggests movies with blurbs -> OMDb verifies and fills in metadata -> saved permanently and returned. Partial results are not saved.
+- City movie search in place: GeoNames ID -> saved result, or LLM suggests movies with blurbs -> OMDb verifies and fills in metadata and ratings -> Wikidata finds site IDs for new Movies -> saved permanently and returned with five links each. Partial results are not saved.
 - City lookup in place: suggestions from Open-Meteo, featured Cities from Postgres.
-- Not started: external links and ratings, observability, deployment, frontend.
+- Not started: observability, deployment, frontend.
 
 ## Commands
 

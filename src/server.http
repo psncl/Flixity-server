@@ -10,7 +10,8 @@ Accept: application/json
 
 ###
 
-# The first search of a city costs money (one LLM call).
+# The first search of a city costs money (one LLM call), and also calls OMDb and Wikidata.
+# Each movie has five links (IMDb, Letterboxd, Rotten Tomatoes, Metacritic, MUBI), with ratings where available.
 POST {{server_HostAddress}}/cities/2988507/search
 Accept: application/json
 
