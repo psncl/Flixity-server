@@ -30,9 +30,12 @@ No usable rating API was found for Letterboxd or MUBI. Letterboxd's API is invit
 - **Store site IDs, not URLs:** RottenTomatoesId, MetacriticId, LetterboxdId, MubiId. URLs are built in code, so format changes need no data update.
 - **Wikidata as ID bridge:** one query per new City covers all its IMDb IDs. TMDb was rejected because it lacks most of these IDs and requires attribution.
 - **Fallback:** use a site's search URL when its ID is missing.
-- **Wikidata failure:** save the movies anyway; IDs stay missing until backfilled.
-- **Response:** each movie gains `links`, with `site`, `url`, `rating` (nullable) and `isSearch`.
-- **Rotten Tomatoes:** scores need brand attribution and must link to the movie's own page. The research concluded that a search link is not enough.
+- **Wikidata failure:** save the Movies anyway, with search links where IDs are missing, and do not mark the result partial. There is no backfill: saved results never contact external services. A backfill can be a later change.
+- **Wikidata retries:** retry once on a temporary failure or a 429 whose `Retry-After` is at most 5 seconds, with a 10-second timeout per attempt. A failure costs only links, so it should not slow the search much.
+- **Only new Movies:** Movies already stored keep their saved IDs and ratings, so only new Movies are looked up.
+- **Response:** each movie gains `links`, with `site`, `url`, `rating` (nullable) and `isSearch`, always in the order IMDb, Letterboxd, Rotten Tomatoes, Metacritic, MUBI. `rating` is a display string: `8.8/10`, `79%`, `66/100`. Ratings are stored as numbers, so the format can change without a data update.
+- **Letterboxd:** use `/film/{id}/` when Wikidata has P6127, else `/imdb/{imdbId}/`. Both open the film directly, so neither is a search.
+- **Rotten Tomatoes:** scores need brand attribution and must link to the movie's own page. A search link is not enough, so the score is stored but returned as null while only a search link exists. Brand attribution is the frontend's job.
 
 ## Risks / Trade-offs
 
@@ -42,4 +45,4 @@ No usable rating API was found for Letterboxd or MUBI. Letterboxd's API is invit
 
 ## Open Questions
 
-- Confirm hiding Rotten Tomatoes scores that have only a search link (recommended, given the rule above). Resolve before writing specs.
+None. Hiding Rotten Tomatoes scores that have only a search link, and having no backfill, were confirmed with the owner on 2026-11-26.
