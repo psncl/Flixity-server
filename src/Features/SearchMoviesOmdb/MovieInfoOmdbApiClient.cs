@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,9 +17,15 @@ public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOpti
         string? Plot,
         string? Poster,
         [property: JsonPropertyName("imdbID")] string? ImdbId,
+        [property: JsonPropertyName("imdbRating")] string? ImdbRating,
+        string? Metascore,
+        List<OmdbRating>? Ratings,
         string? Response,
         string? Error
     );
+
+    /// <summary>One entry of OMDb's Ratings list, such as Source "Rotten Tomatoes" with Value "79%".</summary>
+    private record OmdbRating(string? Source, string? Value);
 
     public async Task<MovieInfo?> FindMovieAsync(string title, int year, CancellationToken cancellationToken = default)
     {
@@ -45,8 +52,34 @@ public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOpti
         var year = FirstYear().Match(response.Year ?? "");
         if (!year.Success) return null;
 
+        var rottenTomatoes = response.Ratings?.FirstOrDefault(rating => rating.Source == "Rotten Tomatoes")?.Value;
+
         return new MovieInfo(response.ImdbId, response.Title, int.Parse(year.Value), NullIfMissing(response.Director),
-            NullIfMissing(response.Plot), NullIfMissing(response.Poster));
+            NullIfMissing(response.Plot), NullIfMissing(response.Poster),
+            ImdbRating: ParseImdbRating(response.ImdbRating),
+            RottenTomatoes: ParseScore(rottenTomatoes, suffix: "%"),
+            Metascore: ParseScore(response.Metascore));
+    }
+
+    // Ratings are optional, so anything unreadable ("N/A", "abc", out of range) is null rather than an error.
+    // InvariantCulture so that "8.8" parses the same on a machine whose culture uses a decimal comma.
+
+    /// <summary>"8.8" to 8.8, if between 0 and 10.</summary>
+    private static decimal? ParseImdbRating(string? value) =>
+        decimal.TryParse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var rating)
+        && rating <= 10
+            ? rating
+            : null;
+
+    /// <summary>"67" (or "79%" with the suffix) to 67, if between 0 and 100.</summary>
+    private static int? ParseScore(string? value, string suffix = "")
+    {
+        if (value is null || !value.EndsWith(suffix, StringComparison.Ordinal)) return null;
+
+        return int.TryParse(value.AsSpan(0, value.Length - suffix.Length), NumberStyles.None,
+            CultureInfo.InvariantCulture, out var score) && score <= 100
+            ? score
+            : null;
     }
 
     private static string? NullIfMissing(string? value) =>

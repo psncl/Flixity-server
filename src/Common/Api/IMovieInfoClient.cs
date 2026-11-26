@@ -1,6 +1,18 @@
 namespace server.Common.Api;
 
-public record MovieInfo(string ImdbId, string Title, int Year, string? Director, string? Plot, string? PosterUrl);
+/// <param name="ImdbRating">Out of 10, such as 8.8.</param>
+/// <param name="RottenTomatoes">Tomatometer, 0 to 100.</param>
+/// <param name="Metascore">0 to 100.</param>
+public record MovieInfo(
+    string ImdbId,
+    string Title,
+    int Year,
+    string? Director,
+    string? Plot,
+    string? PosterUrl,
+    decimal? ImdbRating = null,
+    int? RottenTomatoes = null,
+    int? Metascore = null);
 
 /// <summary>A movie lookup failed. Different from a lookup that found nothing.</summary>
 /// <param name="refused">True if further lookups would fail too, e.g. because the quota is used up.</param>

@@ -7,7 +7,7 @@
 
 ## 2. Ratings from OMDb
 
-- [ ] 2.1 Deserialize `imdbRating`, `Metascore` and the Rotten Tomatoes entry in `Ratings`, mapping "N/A" and unreadable values to null; verify unit tests with fake OMDb responses for all present, each missing, and unreadable values
+- [x] 2.1 Deserialize `imdbRating`, `Metascore` and the Rotten Tomatoes entry in `Ratings`, mapping "N/A" and unreadable values to null; verify unit tests with fake OMDb responses for all present, each missing, and unreadable values
 
 ## 3. Site IDs from Wikidata
 

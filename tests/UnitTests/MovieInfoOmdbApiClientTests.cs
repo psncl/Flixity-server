@@ -189,6 +189,112 @@ public class MovieInfoOmdbApiClientTests
     }
 
     [Fact]
+    public async Task ReturnsAllRatings()
+    {
+        var body = WithRatings("8.8", "67", ("Internet Movie Database", "8.8/10"), ("Rotten Tomatoes", "79%"),
+            ("Metacritic", "67/100"));
+
+        var movie = await Find("M", 2000, body);
+
+        movie!.ImdbRating.Should().Be(8.8m);
+        movie.RottenTomatoes.Should().Be(79);
+        movie.Metascore.Should().Be(67);
+    }
+
+    [Fact]
+    public async Task MissingImdbRating_IsNull()
+    {
+        var movie = await Find("M", 2000, WithRatings("N/A", "67", ("Rotten Tomatoes", "79%")));
+
+        movie!.ImdbRating.Should().BeNull();
+        movie.RottenTomatoes.Should().Be(79);
+        movie.Metascore.Should().Be(67);
+    }
+
+    [Fact]
+    public async Task MissingMetascore_IsNull()
+    {
+        var movie = await Find("M", 2000, WithRatings("8.8", "N/A", ("Rotten Tomatoes", "79%")));
+
+        movie!.Metascore.Should().BeNull();
+        movie.ImdbRating.Should().Be(8.8m);
+        movie.RottenTomatoes.Should().Be(79);
+    }
+
+    [Fact]
+    public async Task NoRottenTomatoesEntry_IsNull()
+    {
+        var movie = await Find("M", 2000, WithRatings("8.8", "67", ("Internet Movie Database", "8.8/10")));
+
+        movie!.RottenTomatoes.Should().BeNull();
+        movie.ImdbRating.Should().Be(8.8m);
+    }
+
+    [Fact]
+    public async Task NoRatingsAtAll_AreNull()
+    {
+        // The plain Movie body has no imdbRating, Metascore or Ratings fields.
+        var movie = await Find("M", 2000, Movie("M", "2000"));
+
+        movie!.ImdbRating.Should().BeNull();
+        movie.RottenTomatoes.Should().BeNull();
+        movie.Metascore.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("")]
+    [InlineData("10.5")] // Above the scale
+    [InlineData("-1")]
+    [InlineData("8,8")] // Decimal comma is not OMDb's format
+    public async Task UnreadableImdbRating_IsNull(string value)
+    {
+        var movie = await Find("M", 2000, WithRatings(value, "67"));
+
+        movie.Should().NotBeNull();
+        movie!.ImdbRating.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("101")]
+    [InlineData("-5")]
+    [InlineData("67.5")]
+    public async Task UnreadableMetascore_IsNull(string value)
+    {
+        var movie = await Find("M", 2000, WithRatings("8.8", value));
+
+        movie.Should().NotBeNull();
+        movie!.Metascore.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("79")] // Missing the percent sign
+    [InlineData("abc%")]
+    [InlineData("101%")]
+    [InlineData("%")]
+    [InlineData(null)]
+    public async Task UnreadableRottenTomatoes_IsNull(string? value)
+    {
+        var movie = await Find("M", 2000, WithRatings("8.8", "67", ("Rotten Tomatoes", value)));
+
+        movie.Should().NotBeNull();
+        movie!.RottenTomatoes.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("0", "0", "0%")]
+    [InlineData("10", "100", "100%")]
+    public async Task RatingsAtTheEndsOfTheScale_AreKept(string imdb, string metascore, string rottenTomatoes)
+    {
+        var movie = await Find("M", 2000, WithRatings(imdb, metascore, ("Rotten Tomatoes", rottenTomatoes)));
+
+        movie!.ImdbRating.Should().Be(decimal.Parse(imdb));
+        movie.Metascore.Should().Be(int.Parse(metascore));
+        movie.RottenTomatoes.Should().Be(int.Parse(rottenTomatoes.TrimEnd('%')));
+    }
+
+    [Fact]
     public void DefaultRetries_AreTwo()
     {
         new OmdbOptions().RetryDelays.Should().Equal(TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(1));
@@ -199,6 +305,16 @@ public class MovieInfoOmdbApiClientTests
         {
             Title = title, Year = year, Type = type, imdbID = "tt1", Response = "True",
             Director = missing ?? "Director", Plot = missing ?? "Plot", Poster = missing ?? "https://poster.test/1.jpg"
+        });
+
+    /// <summary>A movie "M" from 2000, with OMDb's three rating fields.</summary>
+    private static string WithRatings(string imdbRating, string metascore,
+        params (string Source, string? Value)[] ratings) =>
+        JsonSerializer.Serialize(new
+        {
+            Title = "M", Year = "2000", Type = "movie", imdbID = "tt1", Response = "True",
+            imdbRating, Metascore = metascore,
+            Ratings = ratings.Select(rating => new { rating.Source, rating.Value })
         });
 
     private static Task<MovieInfo?> Find(string title, int year, string body) =>
