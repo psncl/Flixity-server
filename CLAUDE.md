@@ -53,3 +53,5 @@ Scripts in `.claude/hooks/`, set up in `.claude/settings.json`:
 
 - Stop: if C# changed, builds the solution and runs unit tests; a failure blocks finishing (up to 3 times)
 - Edit/Write: archived OpenSpec changes are read-only, hand edits to migrations need approval, and secret-looking text is rejected (use user secrets)
+
+Conventions that apply only to some folders are in `.claude/rules/`, and load when those files are touched: `tests.md` for `tests/`, `database.md` for `src/Common/Database/`.
