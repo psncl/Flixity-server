@@ -1,7 +1,6 @@
 namespace server.Common.Api;
 
 /// <param name="ImdbRating">Out of 10, such as 8.8.</param>
-/// <param name="RottenTomatoes">Tomatometer, 0 to 100.</param>
 /// <param name="Metascore">0 to 100.</param>
 public record MovieInfo(
     string ImdbId,
@@ -11,7 +10,6 @@ public record MovieInfo(
     string? Plot,
     string? PosterUrl,
     decimal? ImdbRating = null,
-    int? RottenTomatoes = null,
     int? Metascore = null);
 
 /// <summary>A movie lookup failed. Different from a lookup that found nothing.</summary>

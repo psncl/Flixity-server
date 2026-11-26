@@ -23,7 +23,7 @@ Director (nullable)
 Plot (nullable)
 PosterUrl (nullable)
 ImdbRating (nullable): out of 10, one decimal place
-RottenTomatoes, Metascore (nullable): 0 to 100
+Metascore (nullable): 0 to 100
 RottenTomatoesId, MetacriticId, LetterboxdId, MubiId (nullable): site IDs, not URLs
 Ratings and site IDs are saved when the Movie is first stored and never refreshed.
 FetchedAt

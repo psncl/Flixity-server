@@ -15,8 +15,6 @@ public class Movie
     // Ratings from OMDb, saved when the Movie is first stored and never refreshed.
     /// <summary>IMDb rating out of 10, such as 8.8.</summary>
     public decimal? ImdbRating { get; set; }
-    /// <summary>Rotten Tomatoes Tomatometer, 0 to 100.</summary>
-    public int? RottenTomatoes { get; set; }
     /// <summary>Metacritic Metascore, 0 to 100.</summary>
     public int? Metascore { get; set; }
 

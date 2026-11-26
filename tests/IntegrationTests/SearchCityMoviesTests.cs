@@ -139,7 +139,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
     {
         LlmSuggests("A");
         _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(
-            Movie("A") with { ImdbRating = 8.8m, RottenTomatoes = 79, Metascore = 67 });
+            Movie("A") with { ImdbRating = 8.8m, Metascore = 67 });
         WikidataKnows(("tt-A", new MovieSiteIds("m/a", "movie/a", "a", "1")));
 
         await SearchOkAsync();
@@ -147,7 +147,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
         await using var db = _database.CreateDbContext();
         (await db.Movies.SingleAsync(movie => movie.ImdbId == "tt-A")).Should().BeEquivalentTo(new
         {
-            ImdbRating = 8.8m, RottenTomatoes = 79, Metascore = 67,
+            ImdbRating = 8.8m, Metascore = 67,
             RottenTomatoesId = "m/a", MetacriticId = "movie/a", LetterboxdId = "a", MubiId = "1",
         });
     }
@@ -226,7 +226,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
     {
         LlmSuggests("A");
         _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(
-            Movie("A") with { ImdbRating = 8.8m, RottenTomatoes = 79, Metascore = 67 });
+            Movie("A") with { ImdbRating = 8.8m, Metascore = 67 });
         WikidataKnows(("tt-A", new MovieSiteIds("m/a", "movie/a", "a", "1")));
 
         var result = await SearchOkAsync();
@@ -234,7 +234,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
         result.Movies.Single().Links.Should().Equal(
             new MovieLink(MovieSite.Imdb, "https://www.imdb.com/title/tt-A/", "8.8/10", false),
             new MovieLink(MovieSite.Letterboxd, "https://letterboxd.com/film/a/", null, false),
-            new MovieLink(MovieSite.RottenTomatoes, "https://www.rottentomatoes.com/m/a", "79%", false),
+            new MovieLink(MovieSite.RottenTomatoes, "https://www.rottentomatoes.com/m/a", null, false),
             new MovieLink(MovieSite.Metacritic, "https://www.metacritic.com/movie/a", "67/100", false),
             new MovieLink(MovieSite.Mubi, "https://mubi.com/films/1", null, false));
     }
@@ -243,7 +243,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
     public async Task SavedResult_ReturnsTheSameLinks_WithEverythingUnavailable()
     {
         _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(call =>
-            Movie(call.Arg<string>()) with { ImdbRating = 7.5m, RottenTomatoes = 90, Metascore = 70 });
+            Movie(call.Arg<string>()) with { ImdbRating = 7.5m, Metascore = 70 });
         WikidataKnows(("tt-A", new MovieSiteIds("m/a", null, "a", null)));
         var first = await SearchOkAsync();
         MakeEverythingUnavailable();

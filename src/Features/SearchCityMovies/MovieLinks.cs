@@ -29,13 +29,6 @@ public static class MovieLinks
     {
         var title = Uri.EscapeDataString(movie.Title);
 
-        var rottenTomatoes = movie.RottenTomatoesId is { } rtId
-            // Rotten Tomatoes requires scores to link to the movie's own page, so a search link has no score.
-            ? new MovieLink(MovieSite.RottenTomatoes, $"https://www.rottentomatoes.com/{Path(rtId)}",
-                Percent(movie.RottenTomatoes), IsSearch: false)
-            : new MovieLink(MovieSite.RottenTomatoes, $"https://www.rottentomatoes.com/search?search={title}",
-                Rating: null, IsSearch: true);
-
         return
         [
             new(MovieSite.Imdb, $"https://www.imdb.com/title/{Path(movie.ImdbId)}/", OutOf10(movie.ImdbRating), false),
@@ -45,7 +38,10 @@ public static class MovieLinks
                 ? new(MovieSite.Letterboxd, $"https://letterboxd.com/film/{Path(letterboxdId)}/", null, false)
                 : new(MovieSite.Letterboxd, $"https://letterboxd.com/imdb/{Path(movie.ImdbId)}/", null, false),
 
-            rottenTomatoes,
+            // Link only: OMDb no longer returns Rotten Tomatoes scores, so none is stored.
+            movie.RottenTomatoesId is { } rtId
+                ? new(MovieSite.RottenTomatoes, $"https://www.rottentomatoes.com/{Path(rtId)}", null, false)
+                : new(MovieSite.RottenTomatoes, $"https://www.rottentomatoes.com/search?search={title}", null, true),
 
             movie.MetacriticId is { } metacriticId
                 ? new(MovieSite.Metacritic, $"https://www.metacritic.com/{Path(metacriticId)}",
@@ -71,8 +67,6 @@ public static class MovieLinks
     // InvariantCulture so that 8.8 isn't shown as "8,8" on a machine whose culture uses a decimal comma.
     private static string? OutOf10(decimal? rating) =>
         rating is { } value ? $"{value.ToString("0.0", CultureInfo.InvariantCulture)}/10" : null;
-
-    private static string? Percent(int? score) => score is { } value ? $"{value}%" : null;
 
     private static string? OutOf100(int? score) => score is { } value ? $"{value}/100" : null;
 }

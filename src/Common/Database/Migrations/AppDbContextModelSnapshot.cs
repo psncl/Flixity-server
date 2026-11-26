@@ -426,9 +426,6 @@ namespace server.Common.Database.Migrations
                     b.Property<string>("PosterUrl")
                         .HasColumnType("text");
 
-                    b.Property<int?>("RottenTomatoes")
-                        .HasColumnType("integer");
-
                     b.Property<string>("RottenTomatoesId")
                         .HasColumnType("text");
 

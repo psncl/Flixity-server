@@ -49,7 +49,7 @@ public class CityMovieStore(AppDbContext db)
     {
         ImdbId = info.ImdbId, Title = info.Title, Year = info.Year, Director = info.Director,
         Plot = info.Plot, PosterUrl = info.PosterUrl, FetchedAt = fetchedAt,
-        ImdbRating = info.ImdbRating, RottenTomatoes = info.RottenTomatoes, Metascore = info.Metascore,
+        ImdbRating = info.ImdbRating, Metascore = info.Metascore,
         RottenTomatoesId = siteIds?.RottenTomatoesId, MetacriticId = siteIds?.MetacriticId,
         LetterboxdId = siteIds?.LetterboxdId, MubiId = siteIds?.MubiId,
     };

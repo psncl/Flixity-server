@@ -34,7 +34,7 @@ public class MovieLinksTests
         var movie = FightClub();
 
         Link(movie, MovieSite.RottenTomatoes).Should().Be(new MovieLink(MovieSite.RottenTomatoes,
-            "https://www.rottentomatoes.com/m/fight_club", "79%", IsSearch: false));
+            "https://www.rottentomatoes.com/m/fight_club", null, IsSearch: false));
         Link(movie, MovieSite.Metacritic).Should().Be(new MovieLink(MovieSite.Metacritic,
             "https://www.metacritic.com/movie/fight-club", "67/100", IsSearch: false));
         Link(movie, MovieSite.Mubi).Should().Be(new MovieLink(MovieSite.Mubi,
@@ -100,11 +100,12 @@ public class MovieLinksTests
     }
 
     [Fact]
-    public void AllRatings()
+    public void AllRatings_OnlyImdbAndMetacriticHaveOne()
     {
+        // Rotten Tomatoes is known here, so its link is direct, and it still has no rating.
         var links = MovieLinks.For(FightClub());
 
-        links.Select(link => link.Rating).Should().Equal("8.8/10", null, "79%", "67/100", null);
+        links.Select(link => link.Rating).Should().Equal("8.8/10", null, null, "67/100", null);
     }
 
     [Theory]
@@ -139,7 +140,6 @@ public class MovieLinksTests
     {
         var movie = FightClub();
         movie.ImdbRating = null;
-        movie.RottenTomatoes = null;
         movie.Metascore = null;
 
         var links = MovieLinks.For(movie);
@@ -150,10 +150,10 @@ public class MovieLinksTests
     }
 
     [Fact]
-    public void RottenTomatoesScore_IsHidden_WithASearchLink()
+    public void RottenTomatoesSearchLink_HasNoRating()
     {
         var movie = FightClub();
-        movie.RottenTomatoesId = null; // The score is stored, but the movie's page is unknown
+        movie.RottenTomatoesId = null;
 
         Link(movie, MovieSite.RottenTomatoes).Should().Be(new MovieLink(MovieSite.RottenTomatoes,
             "https://www.rottentomatoes.com/search?search=Fight%20Club", null, IsSearch: true));
@@ -162,7 +162,6 @@ public class MovieLinksTests
     [Fact]
     public void Metascore_IsShown_WithASearchLink()
     {
-        // Only Rotten Tomatoes requires a link to the movie's own page.
         var movie = FightClub();
         movie.MetacriticId = null;
 
@@ -175,7 +174,7 @@ public class MovieLinksTests
     {
         var json = JsonSerializer.Serialize(Link(FightClub(), MovieSite.RottenTomatoes), JsonSerializerOptions.Web);
 
-        json.Should().Be("""{"site":"rottenTomatoes","url":"https://www.rottentomatoes.com/m/fight_club","rating":"79%","isSearch":false}""");
+        json.Should().Be("""{"site":"rottenTomatoes","url":"https://www.rottentomatoes.com/m/fight_club","rating":null,"isSearch":false}""");
     }
 
     private static MovieLink Link(Movie movie, MovieSite site) => MovieLinks.For(movie).Single(link => link.Site == site);
@@ -183,7 +182,7 @@ public class MovieLinksTests
     private static Movie FightClub(bool withSiteIds = true) => new()
     {
         ImdbId = "tt0137523", Title = "Fight Club", Year = 1999, FetchedAt = DateTimeOffset.UtcNow,
-        ImdbRating = 8.8m, RottenTomatoes = 79, Metascore = 67,
+        ImdbRating = 8.8m, Metascore = 67,
         RottenTomatoesId = withSiteIds ? "m/fight_club" : null,
         MetacriticId = withSiteIds ? "movie/fight-club" : null,
         LetterboxdId = withSiteIds ? "fight-club" : null,

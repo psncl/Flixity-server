@@ -72,7 +72,6 @@ public class MovieStorageTests(DatabaseFixture database)
         await using var transaction = await db.Database.BeginTransactionAsync();
         var movie = Movie("tt0137523");
         movie.ImdbRating = 8.8m;
-        movie.RottenTomatoes = 79;
         movie.Metascore = 67;
         movie.RottenTomatoesId = "m/fight_club";
         movie.MetacriticId = "movie/fight-club";
@@ -100,7 +99,6 @@ public class MovieStorageTests(DatabaseFixture database)
         var reloaded = await db.Movies.SingleAsync(m => m.ImdbId == "tt1");
 
         reloaded.ImdbRating.Should().BeNull();
-        reloaded.RottenTomatoes.Should().BeNull();
         reloaded.Metascore.Should().BeNull();
         reloaded.RottenTomatoesId.Should().BeNull();
         reloaded.MetacriticId.Should().BeNull();

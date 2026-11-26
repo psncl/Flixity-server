@@ -28,4 +28,4 @@
 
 ## 6. Rotten Tomatoes links only
 
-- [ ] 6.1 Drop the RottenTomatoes column with a migration, stop reading the Rotten Tomatoes entry from OMDb, and always return a null Rotten Tomatoes rating; update `Entities.md`; verify unit tests for the ratings scenarios in the spec and that all tests pass
+- [x] 6.1 Drop the RottenTomatoes column with a migration, stop reading the Rotten Tomatoes entry from OMDb, and always return a null Rotten Tomatoes rating; update `Entities.md`; verify unit tests for the ratings scenarios in the spec and that all tests pass

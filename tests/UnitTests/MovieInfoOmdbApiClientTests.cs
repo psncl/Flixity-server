@@ -191,42 +191,30 @@ public class MovieInfoOmdbApiClientTests
     [Fact]
     public async Task ReturnsAllRatings()
     {
-        var body = WithRatings("8.8", "67", ("Internet Movie Database", "8.8/10"), ("Rotten Tomatoes", "79%"),
+        var body = WithRatings("8.8", "67", ("Internet Movie Database", "8.8/10"),
             ("Metacritic", "67/100"));
 
         var movie = await Find("M", 2000, body);
 
         movie!.ImdbRating.Should().Be(8.8m);
-        movie.RottenTomatoes.Should().Be(79);
         movie.Metascore.Should().Be(67);
     }
 
     [Fact]
     public async Task MissingImdbRating_IsNull()
     {
-        var movie = await Find("M", 2000, WithRatings("N/A", "67", ("Rotten Tomatoes", "79%")));
+        var movie = await Find("M", 2000, WithRatings("N/A", "67"));
 
         movie!.ImdbRating.Should().BeNull();
-        movie.RottenTomatoes.Should().Be(79);
         movie.Metascore.Should().Be(67);
     }
 
     [Fact]
     public async Task MissingMetascore_IsNull()
     {
-        var movie = await Find("M", 2000, WithRatings("8.8", "N/A", ("Rotten Tomatoes", "79%")));
+        var movie = await Find("M", 2000, WithRatings("8.8", "N/A"));
 
         movie!.Metascore.Should().BeNull();
-        movie.ImdbRating.Should().Be(8.8m);
-        movie.RottenTomatoes.Should().Be(79);
-    }
-
-    [Fact]
-    public async Task NoRottenTomatoesEntry_IsNull()
-    {
-        var movie = await Find("M", 2000, WithRatings("8.8", "67", ("Internet Movie Database", "8.8/10")));
-
-        movie!.RottenTomatoes.Should().BeNull();
         movie.ImdbRating.Should().Be(8.8m);
     }
 
@@ -237,7 +225,6 @@ public class MovieInfoOmdbApiClientTests
         var movie = await Find("M", 2000, Movie("M", "2000"));
 
         movie!.ImdbRating.Should().BeNull();
-        movie.RottenTomatoes.Should().BeNull();
         movie.Metascore.Should().BeNull();
     }
 
@@ -269,29 +256,14 @@ public class MovieInfoOmdbApiClientTests
     }
 
     [Theory]
-    [InlineData("79")] // Missing the percent sign
-    [InlineData("abc%")]
-    [InlineData("101%")]
-    [InlineData("%")]
-    [InlineData(null)]
-    public async Task UnreadableRottenTomatoes_IsNull(string? value)
+    [InlineData("0", "0")]
+    [InlineData("10", "100")]
+    public async Task RatingsAtTheEndsOfTheScale_AreKept(string imdb, string metascore)
     {
-        var movie = await Find("M", 2000, WithRatings("8.8", "67", ("Rotten Tomatoes", value)));
-
-        movie.Should().NotBeNull();
-        movie!.RottenTomatoes.Should().BeNull();
-    }
-
-    [Theory]
-    [InlineData("0", "0", "0%")]
-    [InlineData("10", "100", "100%")]
-    public async Task RatingsAtTheEndsOfTheScale_AreKept(string imdb, string metascore, string rottenTomatoes)
-    {
-        var movie = await Find("M", 2000, WithRatings(imdb, metascore, ("Rotten Tomatoes", rottenTomatoes)));
+        var movie = await Find("M", 2000, WithRatings(imdb, metascore));
 
         movie!.ImdbRating.Should().Be(decimal.Parse(imdb));
         movie.Metascore.Should().Be(int.Parse(metascore));
-        movie.RottenTomatoes.Should().Be(int.Parse(rottenTomatoes.TrimEnd('%')));
     }
 
     [Fact]
