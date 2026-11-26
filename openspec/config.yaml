@@ -18,24 +18,17 @@ context: |
 #     Designs and tasks must cover Windows, macOS, and Linux
 #     Write all artifacts in Spanish
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+# Per-artifact rules: constraints applied when writing that artifact.
+rules:
+  tasks:
+    - Each task ends with the build green and its tests passing, and is small enough for one commit
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+# Per-operation guidance: advisory, for how apply and archive work is done.
+operations:
+  apply:
+    guidance:
+      - After each task, run the unit tests, plus the integration tests if the task touched the database or an endpoint, then commit before starting the next task
+  archive:
+    guidance:
+      - Before archiving, offer the user a /code-review of the branch
+      - When archiving, update CLAUDE.md to match the code - mark the change done under Planning, and update Current state, Stack, Structure and the "Planned, not yet in code" list

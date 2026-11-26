@@ -7,7 +7,10 @@
 
 # Tradeoffs
 
-- Google Gen AI .NET SDK instead of MS Agent Framework for simplicity
+- `Microsoft.Extensions.AI` (`IChatClient`) for the LLM, instead of a provider SDK or MS Agent Framework
+  - Started with the Google Gen AI .NET SDK (Gemini), chosen over MS Agent Framework for simplicity
+  - Switched so the provider is a config setting behind one interface (OpenAI by default) instead of code tied to one SDK
+  - Still simpler than Agent Framework, which is built for agents and workflows; this app makes one prompt-and-response call
 
 ## Vertical Slice Architecture
   - [YT: Vertical Slice Architecture: How Does it Compare to Clean Architecture](https://www.youtube.com/watch?v=T-EwN9UqRwE)

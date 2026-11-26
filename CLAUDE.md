@@ -46,3 +46,10 @@ Vertical slice architecture: code is grouped by feature under `src/Features/`, s
 - Build: `dotnet build src/server.sln`
 - Test: `dotnet test tests/UnitTests`, `dotnet test tests/IntegrationTests`
 - New migration: `dotnet ef migrations add <Name> --project src/server.csproj --output-dir Common/Database/Migrations`
+
+## Hooks
+
+Scripts in `.claude/hooks/`, set up in `.claude/settings.json`:
+
+- Stop: if C# changed, builds the solution and runs unit tests; a failure blocks finishing (up to 3 times)
+- Edit/Write: archived OpenSpec changes are read-only, hand edits to migrations need approval, and secret-looking text is rejected (use user secrets)
