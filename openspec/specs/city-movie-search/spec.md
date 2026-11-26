@@ -47,7 +47,7 @@ The system SHALL give each Movie a Blurb about the searched City of at most 300 
 - **THEN** it is dropped
 
 ### Requirement: Verify suggested Movies
-The system MUST drop a suggestion unless the metadata source returns a movie with a matching title, ignoring case, accents and punctuation, and a year within 1 of the suggested year.
+The system MUST drop a suggestion unless the metadata source returns a movie with a matching title, ignoring case, accents and punctuation, a year within 1 of the suggested year, and at least 1,000 IMDb votes. A missing or unreadable vote count counts as fewer than 1,000.
 
 #### Scenario: Year differs by one
 - **WHEN** "Amélie" from 2001 is suggested and the metadata source lists "Amélie" from 2002
@@ -68,6 +68,22 @@ The system MUST drop a suggestion unless the metadata source returns a movie wit
 #### Scenario: Duplicate Movies
 - **WHEN** two suggestions resolve to the same IMDb ID
 - **THEN** the Movie is returned once, at its first position
+
+#### Scenario: Obscure film with the same title and year
+- **WHEN** "Under the Skin" from 2013 is suggested, the metadata source lists a 16-vote "Under the Skin" from 2013, and also lists a 173,619-vote "Under the Skin" from 2014
+- **THEN** the Movie included is the 173,619-vote film, with the year 2013
+
+#### Scenario: Only obscure films match
+- **WHEN** every matching movie the metadata source returns has fewer than 1,000 IMDb votes
+- **THEN** the suggestion is dropped, and the result is not partial
+
+#### Scenario: Vote count unavailable
+- **WHEN** a matching movie's IMDb vote count is missing or cannot be read as a number
+- **THEN** it is treated as having fewer than 1,000 votes
+
+#### Scenario: Exactly 1,000 votes
+- **WHEN** a matching movie has exactly 1,000 IMDb votes
+- **THEN** the Movie is included
 
 ### Requirement: Reuse completed results
 The system SHALL save a complete result and serve later searches of that City without contacting any external service.

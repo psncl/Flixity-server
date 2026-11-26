@@ -22,7 +22,7 @@ Planned, not yet in code (see `openspec/changes/`):
 
 ## Planning
 
-Plans live in `openspec/`: current behaviour in `specs/`, planned changes in `changes/`, finished ones in `changes/archive/`. `add-city-lookup`, `add-city-movie-search` and `add-movie-links-and-ratings` are done. Build the rest in this order: `tighten-omdb-matching`, `add-observability`, then `deploy-to-azure`. These have a proposal and design only, so write their specs and tasks (as applicable) before building.
+Plans live in `openspec/`: current behaviour in `specs/`, planned changes in `changes/`, finished ones in `changes/archive/`. `add-city-lookup`, `add-city-movie-search`, `add-movie-links-and-ratings` and `tighten-omdb-matching` are done. Build the rest in this order: `add-observability`, then `deploy-to-azure`. These have a proposal and design only, so write their specs and tasks (as applicable) before building.
 
 ## Structure
 
