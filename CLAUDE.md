@@ -8,7 +8,8 @@ The owner is a junior .NET developer building this to learn. Explain non-obvious
 
 - .NET 10 ASP.NET Core minimal API (`src/server.csproj`), OpenAPI + Scalar for docs
 - `Microsoft.Extensions.AI` (`IChatClient`) to get movies for a City; provider and model set in `appsettings.json` (OpenAI `gpt-6-luna`)
-- OMDb API for movie metadata, and to verify that suggested movies exist
+- OMDb API for movie metadata and ratings, and to verify that suggested movies exist
+- Wikidata SPARQL (no key; User-Agent in `appsettings.json`) for movies' Rotten Tomatoes, Metacritic, Letterboxd and MUBI IDs
 - Secrets via ASP.NET Core user secrets
 - Postgres with EF Core (Npgsql provider 10.0.x; 11.x needs .NET 11); local setup in `README.md`
 - Open-Meteo geocoding to identify Cities; built-in `AddValidation()` and ProblemDetails
@@ -32,6 +33,7 @@ Vertical slice architecture: code is grouped by feature under `src/Features/`, s
 - Database model, seed data and migrations: `src/Common/Database/`
 - `SearchMoviesLlm`: LLM client (`IMovieInfoLlmClient`)
 - `SearchMoviesOmdb`: OMDb client (`IMovieInfoClient`)
+- `LookupSiteIdsWikidata`: Wikidata client (`IMovieSiteIdClient`); returns no IDs on failure instead of throwing
 - Endpoints are registered in `src/Endpoints.cs`; services in `src/ConfigureServices.cs`
 - Tests: `tests/UnitTests`, `tests/IntegrationTests`
 

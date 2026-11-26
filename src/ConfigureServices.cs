@@ -19,6 +19,7 @@ public static class ConfigureServices
             builder.AddDatabase();
             builder.AddGeocoder();
             builder.AddOmdbClient();
+            builder.AddWikidataClient();
             builder.AddLlmClient();
             builder.AddCityMovieSearch();
         }
@@ -65,6 +66,22 @@ public static class ConfigureServices
             {
                 client.BaseAddress = new Uri("https://www.omdbapi.com/");
                 client.Timeout = TimeSpan.FromSeconds(5);
+            });
+        }
+
+        private void AddWikidataClient()
+        {
+            builder.Services.AddOptions<WikidataOptions>()
+                .BindConfiguration("Wikidata")
+                // Wikidata blocks requests without a descriptive User-Agent.
+                .Validate(options => !string.IsNullOrWhiteSpace(options.UserAgent), "Wikidata:UserAgent is missing.")
+                .ValidateOnStart();
+
+            builder.Services.AddHttpClient<IMovieSiteIdClient, MovieSiteIdWikidataClient>(client =>
+            {
+                client.BaseAddress = new Uri("https://query.wikidata.org/");
+                // MovieSiteIdWikidataClient does the retry and the timeout for each attempt.
+                client.Timeout = Timeout.InfiniteTimeSpan;
             });
         }
 
