@@ -17,7 +17,7 @@
 
 ## 4. Links in the search
 
-- [ ] 4.1 Build the five links from a Movie's stored IDs and ratings in one place, with search fallbacks, title encoding, rating formats and the hidden Rotten Tomatoes score; verify unit tests for every link and rating scenario in the spec
+- [x] 4.1 Build the five links from a Movie's stored IDs and ratings in one place, with search fallbacks, title encoding, rating formats and the hidden Rotten Tomatoes score; verify unit tests for every link and rating scenario in the spec
 - [ ] 4.2 Look up site IDs for new Movies only, after verification and before saving, and save the ratings and IDs with them; verify integration tests for a first search with IDs, a shared Movie that is not looked up again, and an unavailable ID source that still saves a result that is not partial
 - [ ] 4.3 Add `links` to the response records for first and saved results; verify integration tests that the response has five links in order and that a saved result returns the same links with every external service failing
 - [ ] 4.4 Update `server.http` and `CLAUDE.md` current state; verify the OpenAPI document in Scalar shows `links`
