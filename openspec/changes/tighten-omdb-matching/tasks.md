@@ -7,7 +7,7 @@
 
 ## 2. Real-service check
 
-- [ ] 2.1 Delete Glasgow's saved result (GeoNames 2648579) from the development database: its FilmingLocations and the Movies no other City uses, with `GeneratedAt` reset. Verify that Liverpool's result and the shared The Batman are untouched, then search Glasgow again with the real services and verify that Under the Skin, Filth and The Wife are now tt1441395, tt1450321 and tt3750872, or were dropped
+- [x] 2.1 Delete Glasgow's saved result (GeoNames 2648579) from the development database: its FilmingLocations and the Movies no other City uses, with `GeneratedAt` reset. Verify that Liverpool's result and the shared The Batman are untouched, then search Glasgow again with the real services and verify that Under the Skin, Filth and The Wife are now tt1441395, tt1450321 and tt3750872, or were dropped
 
 ## Workflow follow-up
 
