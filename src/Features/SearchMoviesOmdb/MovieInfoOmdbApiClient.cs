@@ -9,6 +9,12 @@ namespace server.Features.Movies;
 
 public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOptions> options) : IMovieInfoClient
 {
+    /// <summary>
+    /// Fewer IMDb votes than this, and a found movie is not a match. An obscure film can share a suggested
+    /// movie's title and year, but the movies the LLM suggests are well known.
+    /// </summary>
+    public const int MinImdbVotes = 1_000;
+
     private record OmdbApiResponse(
         string? Title,
         string? Year,
@@ -18,6 +24,7 @@ public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOpti
         string? Poster,
         [property: JsonPropertyName("imdbID")] string? ImdbId,
         [property: JsonPropertyName("imdbRating")] string? ImdbRating,
+        [property: JsonPropertyName("imdbVotes")] string? ImdbVotes,
         string? Metascore,
         string? Response,
         string? Error
@@ -44,6 +51,10 @@ public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOpti
         if (response is null || response.Type != "movie") return null;
         if (string.IsNullOrEmpty(response.ImdbId) || string.IsNullOrEmpty(response.Title)) return null;
 
+        // Rejected here, an obscure film counts as no match, so the lookup without the year still runs.
+        // That lookup tends to find the well-known film, which OMDb often lists a year late.
+        if (ParseVotes(response.ImdbVotes) < MinImdbVotes) return null;
+
         // Some years are ranges, e.g. "2001–2003".
         var year = FirstYear().Match(response.Year ?? "");
         if (!year.Success) return null;
@@ -69,6 +80,10 @@ public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOpti
         int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var score) && score <= 100
             ? score
             : null;
+
+    /// <summary>"952,400" to 952400. Missing or unreadable ("N/A") is 0, so it counts as too few.</summary>
+    private static int ParseVotes(string? value) =>
+        int.TryParse(value, NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var votes) ? votes : 0;
 
     private static string? NullIfMissing(string? value) =>
         string.IsNullOrWhiteSpace(value) || value == "N/A" ? null : value;

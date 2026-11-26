@@ -2,8 +2,8 @@
 
 ## 1. Vote threshold
 
-- [ ] 1.1 Read `imdbVotes` in the OMDb client and reject a match with fewer than 1,000 votes in each lookup, so that the lookup without the year still runs; give the shared fake OMDb response a high vote count by default. Verify with unit tests for every new scenario in the spec: an obscure same-year film replaced by the title-only result, only obscure films giving no match without an exception, `"N/A"`, empty and unreadable counts rejected, exactly 1,000 kept, `"952,400"` read as 952,400, and no second request when the first result passes
-- [ ] 1.2 Add `tighten-omdb-matching` to the build order in `CLAUDE.md`'s Planning section, and mark it done when the change is complete; verify all unit and integration tests pass
+- [x] 1.1 Read `imdbVotes` in the OMDb client and reject a match with fewer than 1,000 votes in each lookup, so that the lookup without the year still runs; give the shared fake OMDb response a high vote count by default. Verify with unit tests for every new scenario in the spec: an obscure same-year film replaced by the title-only result, only obscure films giving no match without an exception, `"N/A"`, empty and unreadable counts rejected, exactly 1,000 kept, `"952,400"` read as 952,400, and no second request when the first result passes
+- [x] 1.2 Add `tighten-omdb-matching` to the build order in `CLAUDE.md`'s Planning section; verify all unit and integration tests pass
 
 ## 2. Real-service check
 
@@ -11,4 +11,4 @@
 
 ## Workflow follow-up
 
-- Archive the change once the owner has reviewed the Glasgow result.
+- Archive the change once the owner has reviewed the Glasgow result, and list it as done in `CLAUDE.md`'s Planning section.
