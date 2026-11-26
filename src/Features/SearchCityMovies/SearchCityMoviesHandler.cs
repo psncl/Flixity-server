@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using server.Common.Database;
 
 namespace server.Features.Movies;
 
@@ -11,7 +12,8 @@ public class SearchCityMoviesHandler
         [FromRoute, Range(1, int.MaxValue)] int geoNamesId,
         HttpContext context, CityMovieStore store, CitySearchLocks locks, UncachedSearchLimiter limiter,
         ICityGeocoder geocoder, IMovieInfoLlmClient llmClient, CityMovieFinder finder,
-        ILogger<SearchCityMoviesHandler> logger, CancellationToken cancellationToken)
+        IMovieSiteIdClient siteIdClient, ILogger<SearchCityMoviesHandler> logger,
+        CancellationToken cancellationToken)
     {
         if (await store.GetAsync(geoNamesId, cancellationToken) is { } cached) return TypedResults.Ok(cached);
 
@@ -29,7 +31,8 @@ public class SearchCityMoviesHandler
                 title: "Too many searches of new cities. Try again later.");
         }
 
-        var outcome = await GenerateAsync(geoNamesId, store, geocoder, llmClient, finder, logger, cancellationToken);
+        var outcome = await GenerateAsync(geoNamesId, store, geocoder, llmClient, finder, siteIdClient, logger,
+            cancellationToken);
         if (outcome is not null)
         {
             cityLock.Share(outcome);
@@ -42,8 +45,8 @@ public class SearchCityMoviesHandler
 
     /// <returns>Null if the result was saved.</returns>
     private static async Task<UnsavedOutcome?> GenerateAsync(int geoNamesId, CityMovieStore store,
-        ICityGeocoder geocoder, IMovieInfoLlmClient llmClient, CityMovieFinder finder, ILogger logger,
-        CancellationToken cancellationToken)
+        ICityGeocoder geocoder, IMovieInfoLlmClient llmClient, CityMovieFinder finder,
+        IMovieSiteIdClient siteIdClient, ILogger logger, CancellationToken cancellationToken)
     {
         try
         {
@@ -54,10 +57,19 @@ public class SearchCityMoviesHandler
             var suggestions = await llmClient.GetMoviesFilmedInAsync(city, cancellationToken);
             var found = await finder.FindAsync(suggestions, cancellationToken);
 
-            // Saved results are permanent, so an incomplete one must not be saved.
-            if (found.Partial) return new UnsavedOutcome(StatusCodes.Status200OK, PartialResponse(city, found.Movies));
+            // Only new Movies: stored ones keep the site IDs saved with them. Returns no IDs if Wikidata fails,
+            // which only means search links, so the result is still complete.
+            var imdbIds = found.Movies.Select(f => f.Movie.ImdbId).ToList();
+            var stored = await store.GetMoviesAsync(imdbIds, cancellationToken);
+            var siteIds = await siteIdClient.FindSiteIdsAsync(
+                imdbIds.Where(id => !stored.ContainsKey(id)).ToList(), cancellationToken);
 
-            await store.SaveAsync(city, found.Movies, cancellationToken);
+            // Saved results are permanent, so an incomplete one must not be saved.
+            if (found.Partial)
+                return new UnsavedOutcome(StatusCodes.Status200OK,
+                    PartialResponse(city, found.Movies, stored, siteIds));
+
+            await store.SaveAsync(city, found.Movies, siteIds, cancellationToken);
             return null;
         }
         catch (Exception ex) when (ex is GeocoderUnavailableException or LlmUnavailableException)
@@ -77,10 +89,18 @@ public class SearchCityMoviesHandler
                 : "Movie search is temporarily unavailable.");
     }
 
-    private static SearchCityMoviesResponse PartialResponse(CityInfo city, IReadOnlyList<FoundMovie> found) => new(
-        new SearchCityMoviesResponse.CityDetails(city.GeoNamesId, city.Name, city.Region, city.Country,
-            city.CountryCode),
-        Partial: true,
-        found.Select(f => new SearchCityMoviesResponse.MovieDetails(f.Movie.ImdbId, f.Movie.Title, f.Movie.Year,
-            f.Movie.Director, f.Movie.PosterUrl, f.Movie.Plot, f.Blurb)).ToList());
+    /// <summary>Shows each Movie as it is or would be stored, so its links match a later complete result.</summary>
+    private static SearchCityMoviesResponse PartialResponse(CityInfo city, IReadOnlyList<FoundMovie> found,
+        IReadOnlyDictionary<string, Movie> stored, IReadOnlyDictionary<string, MovieSiteIds> siteIds)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new SearchCityMoviesResponse(
+            new SearchCityMoviesResponse.CityDetails(city.GeoNamesId, city.Name, city.Region, city.Country,
+                city.CountryCode),
+            Partial: true,
+            found.Select(f => SearchCityMoviesResponse.MovieDetails.From(
+                stored.GetValueOrDefault(f.Movie.ImdbId) ??
+                CityMovieStore.NewMovie(f.Movie, siteIds.GetValueOrDefault(f.Movie.ImdbId), now),
+                f.Blurb)).ToList());
+    }
 }

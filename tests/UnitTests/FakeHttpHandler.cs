@@ -8,6 +8,9 @@ public class FakeHttpHandler(Func<Uri, HttpResponseMessage> respond) : HttpMessa
 {
     public List<Uri> Requests { get; } = [];
 
+    /// <summary>The User-Agent of each request, in the same order as <see cref="Requests"/>.</summary>
+    public List<string> UserAgents { get; } = [];
+
     public static HttpResponseMessage Json(string body, HttpStatusCode status = HttpStatusCode.OK) =>
         new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
@@ -15,6 +18,7 @@ public class FakeHttpHandler(Func<Uri, HttpResponseMessage> respond) : HttpMessa
         CancellationToken cancellationToken)
     {
         Requests.Add(request.RequestUri!);
+        UserAgents.Add(request.Headers.UserAgent.ToString());
         return Task.FromResult(respond(request.RequestUri!));
     }
 }

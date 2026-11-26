@@ -404,10 +404,29 @@ namespace server.Common.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("ImdbRating")
+                        .HasPrecision(3, 1)
+                        .HasColumnType("numeric(3,1)");
+
+                    b.Property<string>("LetterboxdId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MetacriticId")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("Metascore")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MubiId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Plot")
                         .HasColumnType("text");
 
                     b.Property<string>("PosterUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RottenTomatoesId")
                         .HasColumnType("text");
 
                     b.Property<string>("Title")

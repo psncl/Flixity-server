@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using server.Common.Api;
@@ -112,6 +113,56 @@ public class MovieInfoOmdbApiClientTests
         (await Client(handler).FindMovieAsync("Amélie", 2001))!.Title.Should().Be("Amélie");
     }
 
+    // Vote threshold
+
+    [Fact]
+    public async Task ObscureFilmWithYear_IsReplacedByTheLookupWithoutYear()
+    {
+        // As OMDb answered on 2026-11-26: the well-known film is listed a year late.
+        var handler = new FakeHttpHandler(uri => FakeHttpHandler.Json(uri.Query.Contains("&y=")
+            ? Movie("Under the Skin", "2013", votes: "16", imdbId: "tt4698852")
+            : Movie("Under the Skin", "2014", votes: "173,619", imdbId: "tt1441395")));
+
+        var movie = await Client(handler).FindMovieAsync("Under the Skin", 2013);
+
+        movie.Should().BeEquivalentTo(new { ImdbId = "tt1441395", Year = 2013 });
+        handler.Requests.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task OnlyObscureFilms_IsNoMatch_WithoutThrowing()
+    {
+        var handler = new FakeHttpHandler(_ => FakeHttpHandler.Json(Movie("M", "2000", votes: "16")));
+
+        (await Client(handler).FindMovieAsync("M", 2000)).Should().BeNull();
+
+        handler.Requests.Should().HaveCount(2);
+    }
+
+    [Theory]
+    [InlineData("1,000", true)] // Exactly the minimum
+    [InlineData("1000", true)]
+    [InlineData("1,000,000", true)]
+    [InlineData("999", false)]
+    [InlineData("N/A", false)] // Unavailable counts as too few
+    [InlineData("", false)]
+    [InlineData("abc", false)]
+    [InlineData("-5000", false)]
+    [InlineData("1.000", false)] // Not OMDb's thousands separator
+    [InlineData(null, false)] // Field missing
+    public async Task MovieNeedsAThousandVotes(string? votes, bool accepted)
+    {
+        var movie = await Find("M", 2000, Movie("M", "2000", votes: votes));
+
+        (movie is not null).Should().Be(accepted);
+    }
+
+    [Fact]
+    public void MinimumVotes_IsAThousand()
+    {
+        MovieInfoOmdbApiClient.MinImdbVotes.Should().Be(1_000);
+    }
+
     [Fact]
     public async Task NeverFound_IsNullAfterTwoLookups()
     {
@@ -189,16 +240,107 @@ public class MovieInfoOmdbApiClientTests
     }
 
     [Fact]
+    public async Task ReturnsAllRatings()
+    {
+        var body = WithRatings("8.8", "67", ("Internet Movie Database", "8.8/10"),
+            ("Metacritic", "67/100"));
+
+        var movie = await Find("M", 2000, body);
+
+        movie!.ImdbRating.Should().Be(8.8m);
+        movie.Metascore.Should().Be(67);
+    }
+
+    [Fact]
+    public async Task MissingImdbRating_IsNull()
+    {
+        var movie = await Find("M", 2000, WithRatings("N/A", "67"));
+
+        movie!.ImdbRating.Should().BeNull();
+        movie.Metascore.Should().Be(67);
+    }
+
+    [Fact]
+    public async Task MissingMetascore_IsNull()
+    {
+        var movie = await Find("M", 2000, WithRatings("8.8", "N/A"));
+
+        movie!.Metascore.Should().BeNull();
+        movie.ImdbRating.Should().Be(8.8m);
+    }
+
+    [Fact]
+    public async Task NoRatingsAtAll_AreNull()
+    {
+        // The plain Movie body has no imdbRating, Metascore or Ratings fields.
+        var movie = await Find("M", 2000, Movie("M", "2000"));
+
+        movie!.ImdbRating.Should().BeNull();
+        movie.Metascore.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("")]
+    [InlineData("10.5")] // Above the scale
+    [InlineData("-1")]
+    [InlineData("8,8")] // Decimal comma is not OMDb's format
+    public async Task UnreadableImdbRating_IsNull(string value)
+    {
+        var movie = await Find("M", 2000, WithRatings(value, "67"));
+
+        movie.Should().NotBeNull();
+        movie!.ImdbRating.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("101")]
+    [InlineData("-5")]
+    [InlineData("67.5")]
+    public async Task UnreadableMetascore_IsNull(string value)
+    {
+        var movie = await Find("M", 2000, WithRatings("8.8", value));
+
+        movie.Should().NotBeNull();
+        movie!.Metascore.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("0", "0")]
+    [InlineData("10", "100")]
+    public async Task RatingsAtTheEndsOfTheScale_AreKept(string imdb, string metascore)
+    {
+        var movie = await Find("M", 2000, WithRatings(imdb, metascore));
+
+        movie!.ImdbRating.Should().Be(decimal.Parse(imdb));
+        movie.Metascore.Should().Be(int.Parse(metascore));
+    }
+
+    [Fact]
     public void DefaultRetries_AreTwo()
     {
         new OmdbOptions().RetryDelays.Should().Equal(TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(1));
     }
 
-    private static string Movie(string title, string year, string type = "movie", string? missing = null) =>
+    /// <param name="votes">Well above the minimum by default. Null leaves the field out.</param>
+    private static string Movie(string title, string year, string type = "movie", string? missing = null,
+        string? votes = "952,400", string imdbId = "tt1") =>
         JsonSerializer.Serialize(new
         {
-            Title = title, Year = year, Type = type, imdbID = "tt1", Response = "True",
-            Director = missing ?? "Director", Plot = missing ?? "Plot", Poster = missing ?? "https://poster.test/1.jpg"
+            Title = title, Year = year, Type = type, imdbID = imdbId, Response = "True",
+            Director = missing ?? "Director", Plot = missing ?? "Plot", Poster = missing ?? "https://poster.test/1.jpg",
+            imdbVotes = votes
+        }, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+
+    /// <summary>A movie "M" from 2000, with OMDb's three rating fields.</summary>
+    private static string WithRatings(string imdbRating, string metascore,
+        params (string Source, string? Value)[] ratings) =>
+        JsonSerializer.Serialize(new
+        {
+            Title = "M", Year = "2000", Type = "movie", imdbID = "tt1", Response = "True", imdbVotes = "952,400",
+            imdbRating, Metascore = metascore,
+            Ratings = ratings.Select(rating => new { rating.Source, rating.Value })
         });
 
     private static Task<MovieInfo?> Find(string title, int year, string body) =>

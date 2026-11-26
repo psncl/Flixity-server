@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,6 +9,12 @@ namespace server.Features.Movies;
 
 public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOptions> options) : IMovieInfoClient
 {
+    /// <summary>
+    /// Fewer IMDb votes than this, and a found movie is not a match. An obscure film can share a suggested
+    /// movie's title and year, but the movies the LLM suggests are well known.
+    /// </summary>
+    public const int MinImdbVotes = 1_000;
+
     private record OmdbApiResponse(
         string? Title,
         string? Year,
@@ -16,6 +23,9 @@ public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOpti
         string? Plot,
         string? Poster,
         [property: JsonPropertyName("imdbID")] string? ImdbId,
+        [property: JsonPropertyName("imdbRating")] string? ImdbRating,
+        [property: JsonPropertyName("imdbVotes")] string? ImdbVotes,
+        string? Metascore,
         string? Response,
         string? Error
     );
@@ -41,13 +51,39 @@ public partial class MovieInfoOmdbApiClient(HttpClient client, IOptions<OmdbOpti
         if (response is null || response.Type != "movie") return null;
         if (string.IsNullOrEmpty(response.ImdbId) || string.IsNullOrEmpty(response.Title)) return null;
 
+        // Rejected here, an obscure film counts as no match, so the lookup without the year still runs.
+        // That lookup tends to find the well-known film, which OMDb often lists a year late.
+        if (ParseVotes(response.ImdbVotes) < MinImdbVotes) return null;
+
         // Some years are ranges, e.g. "2001–2003".
         var year = FirstYear().Match(response.Year ?? "");
         if (!year.Success) return null;
 
         return new MovieInfo(response.ImdbId, response.Title, int.Parse(year.Value), NullIfMissing(response.Director),
-            NullIfMissing(response.Plot), NullIfMissing(response.Poster));
+            NullIfMissing(response.Plot), NullIfMissing(response.Poster),
+            ImdbRating: ParseImdbRating(response.ImdbRating),
+            Metascore: ParseScore(response.Metascore));
     }
+
+    // Ratings are optional, so anything unreadable ("N/A", "abc", out of range) is null rather than an error.
+    // InvariantCulture so that "8.8" parses the same on a machine whose culture uses a decimal comma.
+
+    /// <summary>"8.8" to 8.8, if between 0 and 10.</summary>
+    private static decimal? ParseImdbRating(string? value) =>
+        decimal.TryParse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var rating)
+        && rating <= 10
+            ? rating
+            : null;
+
+    /// <summary>"67" to 67, if between 0 and 100.</summary>
+    private static int? ParseScore(string? value) =>
+        int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var score) && score <= 100
+            ? score
+            : null;
+
+    /// <summary>"952,400" to 952400. Missing or unreadable ("N/A") is 0, so it counts as too few.</summary>
+    private static int ParseVotes(string? value) =>
+        int.TryParse(value, NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var votes) ? votes : 0;
 
     private static string? NullIfMissing(string? value) =>
         string.IsNullOrWhiteSpace(value) || value == "N/A" ? null : value;

@@ -30,6 +30,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
     private readonly ICityGeocoder _geocoder = Substitute.For<ICityGeocoder>();
     private readonly IMovieInfoLlmClient _llm = Substitute.For<IMovieInfoLlmClient>();
     private readonly IMovieInfoClient _movies = Substitute.For<IMovieInfoClient>();
+    private readonly IMovieSiteIdClient _siteIds = Substitute.For<IMovieSiteIdClient>();
     private readonly SaveBarrier _saveBarrier = new();
     private readonly WebApplicationFactory<Program> _api;
 
@@ -41,6 +42,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
             services.AddSingleton(_geocoder);
             services.AddSingleton(_llm);
             services.AddSingleton(_movies);
+            services.AddSingleton(_siteIds);
             services.AddSingleton<IStartupFilter, TestIpFilter>();
             services.ConfigureDbContext<AppDbContext>(options => options.AddInterceptors(_saveBarrier));
         }));
@@ -48,6 +50,7 @@ public class SearchCityMoviesTests : IAsyncLifetime
         _geocoder.GetByIdAsync(default).ReturnsForAnyArgs(call => City(call.Arg<int>()));
         LlmSuggests("A", "B");
         _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(call => Movie(call.Arg<string>()));
+        WikidataKnows();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -75,7 +78,13 @@ public class SearchCityMoviesTests : IAsyncLifetime
         (await response.Content.ReadAsStringAsync()).Should().Be(
             """{"city":{"geoNamesId":900000001,"name":"Testville","region":null,"country":"Testland","countryCode":"TL"}""" +
             ""","partial":false,"movies":[{"imdbId":"tt1","title":"A","year":2000,"director":null""" +
-            ""","posterUrl":null,"plot":null,"blurb":"Blurb A"}]}""");
+            ""","posterUrl":null,"plot":null,"blurb":"Blurb A","links":[""" +
+            """{"site":"imdb","url":"https://www.imdb.com/title/tt1/","rating":null,"isSearch":false},""" +
+            """{"site":"letterboxd","url":"https://letterboxd.com/imdb/tt1/","rating":null,"isSearch":false},""" +
+            """{"site":"rottenTomatoes","url":"https://www.rottentomatoes.com/search?search=A","rating":null,"isSearch":true},""" +
+            """{"site":"metacritic","url":"https://www.metacritic.com/search/A/","rating":null,"isSearch":true},""" +
+            """{"site":"mubi","url":"https://mubi.com/en/search/films?query=A","rating":null,"isSearch":true}""" +
+            """]}]}""");
     }
 
     [Fact]
@@ -121,6 +130,154 @@ public class SearchCityMoviesTests : IAsyncLifetime
         (await SearchOkAsync(CityId)).Movies.Single().Blurb.Should().Be("Blurb A");
         await using var db = _database.CreateDbContext();
         (await db.Movies.CountAsync(movie => movie.ImdbId == "tt-A")).Should().Be(1);
+    }
+
+    // Ratings and site IDs
+
+    [Fact]
+    public async Task FirstSearch_SavesRatingsAndSiteIds()
+    {
+        LlmSuggests("A");
+        _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(
+            Movie("A") with { ImdbRating = 8.8m, Metascore = 67 });
+        WikidataKnows(("tt-A", new MovieSiteIds("m/a", "movie/a", "a", "1")));
+
+        await SearchOkAsync();
+
+        await using var db = _database.CreateDbContext();
+        (await db.Movies.SingleAsync(movie => movie.ImdbId == "tt-A")).Should().BeEquivalentTo(new
+        {
+            ImdbRating = 8.8m, Metascore = 67,
+            RottenTomatoesId = "m/a", MetacriticId = "movie/a", LetterboxdId = "a", MubiId = "1",
+        });
+    }
+
+    [Fact]
+    public async Task FirstSearch_LooksUpAllNewMovies_InOneRequest()
+    {
+        await SearchOkAsync();
+
+        await _siteIds.Received(1).FindSiteIdsAsync(
+            Arg.Is<IReadOnlyCollection<string>>(ids => ids.SequenceEqual(new[] { "tt-A", "tt-B" })),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task MovieUnknownToWikidata_IsSavedWithoutSiteIds_OthersAreUnaffected()
+    {
+        WikidataKnows(("tt-A", new MovieSiteIds("m/a", null, null, null)));
+
+        await SearchOkAsync();
+
+        await using var db = _database.CreateDbContext();
+        (await db.Movies.SingleAsync(movie => movie.ImdbId == "tt-A")).RottenTomatoesId.Should().Be("m/a");
+        (await db.Movies.SingleAsync(movie => movie.ImdbId == "tt-B")).Should().BeEquivalentTo(new
+            { RottenTomatoesId = (string?)null, MetacriticId = (string?)null, LetterboxdId = (string?)null,
+              MubiId = (string?)null });
+    }
+
+    [Fact]
+    public async Task SharedMovie_IsNotLookedUpAgain_AndKeepsItsRatingsAndSiteIds()
+    {
+        LlmSuggests("A");
+        _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(Movie("A") with { ImdbRating = 7.0m });
+        WikidataKnows(("tt-A", new MovieSiteIds("m/a", null, null, null)));
+        await SearchOkAsync(CityId);
+        _siteIds.ClearReceivedCalls();
+
+        // The second City finds the same Movie and a new one, with different data from both sources.
+        LlmSuggests("A", "B");
+        _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(call =>
+            Movie(call.Arg<string>()) with { ImdbRating = 9.9m });
+        WikidataKnows(("tt-A", new MovieSiteIds("m/changed", null, null, null)),
+            ("tt-B", new MovieSiteIds("m/b", null, null, null)));
+        await SearchOkAsync(OtherCityId);
+
+        await _siteIds.Received(1).FindSiteIdsAsync(
+            Arg.Is<IReadOnlyCollection<string>>(ids => ids.SequenceEqual(new[] { "tt-B" })),
+            Arg.Any<CancellationToken>());
+        await using var db = _database.CreateDbContext();
+        (await db.Movies.SingleAsync(movie => movie.ImdbId == "tt-A")).Should().BeEquivalentTo(new
+            { ImdbRating = 7.0m, RottenTomatoesId = "m/a" });
+        (await db.Movies.SingleAsync(movie => movie.ImdbId == "tt-B")).RottenTomatoesId.Should().Be("m/b");
+    }
+
+    [Fact]
+    public async Task SiteIdsUnavailable_ResultIsCompleteAndSaved_WithoutSiteIds()
+    {
+        // The client returns no IDs when Wikidata fails, rather than throwing.
+        WikidataKnows();
+
+        var result = await SearchOkAsync();
+
+        result.Partial.Should().BeFalse();
+        await using var db = _database.CreateDbContext();
+        (await db.Cities.SingleAsync(c => c.GeoNamesId == CityId)).GeneratedAt.Should().NotBeNull();
+        (await db.Movies.Where(movie => movie.ImdbId == "tt-A" || movie.ImdbId == "tt-B").ToListAsync())
+            .Should().HaveCount(2).And.OnlyContain(movie => movie.RottenTomatoesId == null &&
+                                                            movie.MetacriticId == null &&
+                                                            movie.LetterboxdId == null && movie.MubiId == null);
+    }
+
+    // Links in the response
+
+    [Fact]
+    public async Task FirstSearch_ReturnsFiveLinksInOrder_WithRatings()
+    {
+        LlmSuggests("A");
+        _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(
+            Movie("A") with { ImdbRating = 8.8m, Metascore = 67 });
+        WikidataKnows(("tt-A", new MovieSiteIds("m/a", "movie/a", "a", "1")));
+
+        var result = await SearchOkAsync();
+
+        result.Movies.Single().Links.Should().Equal(
+            new MovieLink(MovieSite.Imdb, "https://www.imdb.com/title/tt-A/", "8.8/10", false),
+            new MovieLink(MovieSite.Letterboxd, "https://letterboxd.com/film/a/", null, false),
+            new MovieLink(MovieSite.RottenTomatoes, "https://www.rottentomatoes.com/m/a", null, false),
+            new MovieLink(MovieSite.Metacritic, "https://www.metacritic.com/movie/a", "67/100", false),
+            new MovieLink(MovieSite.Mubi, "https://mubi.com/films/1", null, false));
+    }
+
+    [Fact]
+    public async Task SavedResult_ReturnsTheSameLinks_WithEverythingUnavailable()
+    {
+        _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(call =>
+            Movie(call.Arg<string>()) with { ImdbRating = 7.5m, Metascore = 70 });
+        WikidataKnows(("tt-A", new MovieSiteIds("m/a", null, "a", null)));
+        var first = await SearchOkAsync();
+        MakeEverythingUnavailable();
+        WikidataKnows(("tt-A", new MovieSiteIds("m/changed", "movie/changed", "changed", "2")));
+        _siteIds.ClearReceivedCalls();
+
+        var second = await SearchOkAsync();
+
+        second.Movies.Select(movie => movie.Links).Should().BeEquivalentTo(
+            first.Movies.Select(movie => movie.Links), options => options.WithStrictOrdering());
+        second.Movies.Should().HaveCount(2).And.OnlyContain(movie => movie.Links.Count == 5);
+        _siteIds.ReceivedCalls().Should().BeEmpty("a saved result contacts no external service");
+    }
+
+    [Fact]
+    public async Task PartialResult_HasLinks_FromSiteIdsAndStoredMovies()
+    {
+        // A is stored by an earlier search, with its own site IDs.
+        LlmSuggests("A");
+        WikidataKnows(("tt-A", new MovieSiteIds(null, null, null, "1")));
+        await SearchOkAsync(OtherCityId);
+
+        LlmSuggests("A", "B", "C");
+        _movies.FindMovieAsync("C", default).ThrowsAsyncForAnyArgs(new MovieInfoUnavailableException("down"));
+        _movies.FindMovieAsync("A", Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Movie("A"));
+        _movies.FindMovieAsync("B", Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Movie("B"));
+        WikidataKnows(("tt-A", new MovieSiteIds(null, null, null, "changed")),
+            ("tt-B", new MovieSiteIds(null, null, null, "2")));
+
+        var result = await SearchOkAsync();
+
+        result.Partial.Should().BeTrue();
+        result.Movies.Select(movie => movie.Links.Single(link => link.Site == MovieSite.Mubi).Url).Should()
+            .Equal("https://mubi.com/films/1", "https://mubi.com/films/2");
     }
 
     // Cached searches
@@ -459,6 +616,16 @@ public class SearchCityMoviesTests : IAsyncLifetime
 
     private void LlmSuggests(params string[] titles) =>
         _llm.GetMoviesFilmedInAsync(default!).ReturnsForAnyArgs(titles.Select(Suggestion).ToList());
+
+    /// <summary>Wikidata returns these site IDs, and nothing for any other IMDb ID.</summary>
+    private void WikidataKnows(params (string ImdbId, MovieSiteIds Ids)[] known) =>
+        _siteIds.FindSiteIdsAsync(default!, default).ReturnsForAnyArgs(call =>
+        {
+            // Null when NSubstitute runs the previous setup while this one replaces it.
+            var asked = call.Arg<IReadOnlyCollection<string>?>() ?? [];
+            return (IReadOnlyDictionary<string, MovieSiteIds>)known.Where(k => asked.Contains(k.ImdbId))
+                .ToDictionary(k => k.ImdbId, k => k.Ids);
+        });
 
     private void MakeEverythingUnavailable()
     {
