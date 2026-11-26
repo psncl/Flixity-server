@@ -1,6 +1,6 @@
 # Cinema Location
 
-Backend for an app that lists movies by shooting location (city), for travel inspiration. See `Requirements.md` for features, `Entities.md` for the planned data model and `GLOSSARY.md` for domain terms. `Notes.md` holds the author's learning notes and tradeoffs.
+Backend for an app that lists movies by shooting location (city), for travel inspiration. See `Requirements.md` for features, `Entities.md` for the data model and `GLOSSARY.md` for domain terms. `Notes.md` holds the author's learning notes and tradeoffs.
 
 The owner is a junior .NET developer building this to learn. Explain non-obvious choices briefly.
 

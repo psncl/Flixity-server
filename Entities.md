@@ -1,6 +1,6 @@
-# Planned data model
+# Data model
 
-Not yet in code. The reasons are in the `design.md` files under `openspec/changes/`.
+All of this is in code, in `src/Common/Database/`. The reasons are in the `design.md` files under `openspec/changes/` and `openspec/changes/archive/`.
 
 # CITY
 
@@ -22,8 +22,10 @@ Year
 Director (nullable)
 Plot (nullable)
 PosterUrl (nullable)
-ImdbRating, RottenTomatoes, Metascore (nullable)
-RottenTomatoesId, MetacriticId, LetterboxdId, MubiId (nullable)
+ImdbRating (nullable): out of 10, one decimal place
+RottenTomatoes, Metascore (nullable): 0 to 100
+RottenTomatoesId, MetacriticId, LetterboxdId, MubiId (nullable): site IDs, not URLs
+Ratings and site IDs are saved when the Movie is first stored and never refreshed.
 FetchedAt
 
 # FILMING LOCATION

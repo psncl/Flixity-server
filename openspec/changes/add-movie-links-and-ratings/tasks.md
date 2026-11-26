@@ -3,7 +3,7 @@
 ## 1. Data model
 
 - [x] 1.1 Add nullable ImdbRating, RottenTomatoes, Metascore, RottenTomatoesId, MetacriticId, LetterboxdId and MubiId to Movie, plus a migration that also deletes development search results (FilmingLocations and Movies, with GeneratedAt reset); verify it applies to a database with saved results and leaves the seeded Cities intact
-- [ ] 1.2 Check `Entities.md` matches the final columns; verify an integration test saves and reloads a Movie with and without the new values
+- [x] 1.2 Check `Entities.md` matches the final columns; verify an integration test saves and reloads a Movie with and without the new values
 
 ## 2. Ratings from OMDb
 
