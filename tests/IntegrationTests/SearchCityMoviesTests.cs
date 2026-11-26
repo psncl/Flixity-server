@@ -78,7 +78,13 @@ public class SearchCityMoviesTests : IAsyncLifetime
         (await response.Content.ReadAsStringAsync()).Should().Be(
             """{"city":{"geoNamesId":900000001,"name":"Testville","region":null,"country":"Testland","countryCode":"TL"}""" +
             ""","partial":false,"movies":[{"imdbId":"tt1","title":"A","year":2000,"director":null""" +
-            ""","posterUrl":null,"plot":null,"blurb":"Blurb A"}]}""");
+            ""","posterUrl":null,"plot":null,"blurb":"Blurb A","links":[""" +
+            """{"site":"imdb","url":"https://www.imdb.com/title/tt1/","rating":null,"isSearch":false},""" +
+            """{"site":"letterboxd","url":"https://letterboxd.com/imdb/tt1/","rating":null,"isSearch":false},""" +
+            """{"site":"rottenTomatoes","url":"https://www.rottentomatoes.com/search?search=A","rating":null,"isSearch":true},""" +
+            """{"site":"metacritic","url":"https://www.metacritic.com/search/A/","rating":null,"isSearch":true},""" +
+            """{"site":"mubi","url":"https://mubi.com/en/search/films?query=A","rating":null,"isSearch":true}""" +
+            """]}]}""");
     }
 
     [Fact]
@@ -211,6 +217,67 @@ public class SearchCityMoviesTests : IAsyncLifetime
             .Should().HaveCount(2).And.OnlyContain(movie => movie.RottenTomatoesId == null &&
                                                             movie.MetacriticId == null &&
                                                             movie.LetterboxdId == null && movie.MubiId == null);
+    }
+
+    // Links in the response
+
+    [Fact]
+    public async Task FirstSearch_ReturnsFiveLinksInOrder_WithRatings()
+    {
+        LlmSuggests("A");
+        _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(
+            Movie("A") with { ImdbRating = 8.8m, RottenTomatoes = 79, Metascore = 67 });
+        WikidataKnows(("tt-A", new MovieSiteIds("m/a", "movie/a", "a", "1")));
+
+        var result = await SearchOkAsync();
+
+        result.Movies.Single().Links.Should().Equal(
+            new MovieLink(MovieSite.Imdb, "https://www.imdb.com/title/tt-A/", "8.8/10", false),
+            new MovieLink(MovieSite.Letterboxd, "https://letterboxd.com/film/a/", null, false),
+            new MovieLink(MovieSite.RottenTomatoes, "https://www.rottentomatoes.com/m/a", "79%", false),
+            new MovieLink(MovieSite.Metacritic, "https://www.metacritic.com/movie/a", "67/100", false),
+            new MovieLink(MovieSite.Mubi, "https://mubi.com/films/1", null, false));
+    }
+
+    [Fact]
+    public async Task SavedResult_ReturnsTheSameLinks_WithEverythingUnavailable()
+    {
+        _movies.FindMovieAsync(default!, default).ReturnsForAnyArgs(call =>
+            Movie(call.Arg<string>()) with { ImdbRating = 7.5m, RottenTomatoes = 90, Metascore = 70 });
+        WikidataKnows(("tt-A", new MovieSiteIds("m/a", null, "a", null)));
+        var first = await SearchOkAsync();
+        MakeEverythingUnavailable();
+        WikidataKnows(("tt-A", new MovieSiteIds("m/changed", "movie/changed", "changed", "2")));
+        _siteIds.ClearReceivedCalls();
+
+        var second = await SearchOkAsync();
+
+        second.Movies.Select(movie => movie.Links).Should().BeEquivalentTo(
+            first.Movies.Select(movie => movie.Links), options => options.WithStrictOrdering());
+        second.Movies.Should().HaveCount(2).And.OnlyContain(movie => movie.Links.Count == 5);
+        _siteIds.ReceivedCalls().Should().BeEmpty("a saved result contacts no external service");
+    }
+
+    [Fact]
+    public async Task PartialResult_HasLinks_FromSiteIdsAndStoredMovies()
+    {
+        // A is stored by an earlier search, with its own site IDs.
+        LlmSuggests("A");
+        WikidataKnows(("tt-A", new MovieSiteIds(null, null, null, "1")));
+        await SearchOkAsync(OtherCityId);
+
+        LlmSuggests("A", "B", "C");
+        _movies.FindMovieAsync("C", default).ThrowsAsyncForAnyArgs(new MovieInfoUnavailableException("down"));
+        _movies.FindMovieAsync("A", Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Movie("A"));
+        _movies.FindMovieAsync("B", Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Movie("B"));
+        WikidataKnows(("tt-A", new MovieSiteIds(null, null, null, "changed")),
+            ("tt-B", new MovieSiteIds(null, null, null, "2")));
+
+        var result = await SearchOkAsync();
+
+        result.Partial.Should().BeTrue();
+        result.Movies.Select(movie => movie.Links.Single(link => link.Site == MovieSite.Mubi).Url).Should()
+            .Equal("https://mubi.com/films/1", "https://mubi.com/films/2");
     }
 
     // Cached searches

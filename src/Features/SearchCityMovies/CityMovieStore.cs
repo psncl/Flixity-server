@@ -14,13 +14,15 @@ public class CityMovieStore(AppDbContext db)
             .SingleOrDefaultAsync(c => c.GeoNamesId == geoNamesId && c.GeneratedAt != null, cancellationToken);
         if (city is null) return null;
 
-        var movies = await db.FilmingLocations
+        // Links are built in memory after loading: EF Core can't translate MovieLinks.For to SQL.
+        var locations = await db.FilmingLocations.AsNoTracking()
             .Where(location => location.CityId == city.Id)
             .OrderBy(location => location.Position)
-            .Select(location => new SearchCityMoviesResponse.MovieDetails(location.Movie.ImdbId, location.Movie.Title,
-                location.Movie.Year, location.Movie.Director, location.Movie.PosterUrl, location.Movie.Plot,
-                location.Blurb))
+            .Select(location => new { location.Movie, location.Blurb })
             .ToListAsync(cancellationToken);
+        var movies = locations
+            .Select(location => SearchCityMoviesResponse.MovieDetails.From(location.Movie, location.Blurb))
+            .ToList();
 
         return new SearchCityMoviesResponse(
             new SearchCityMoviesResponse.CityDetails(city.GeoNamesId, city.Name, city.Region, city.Country,

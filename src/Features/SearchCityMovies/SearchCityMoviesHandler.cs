@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using server.Common.Database;
 
 namespace server.Features.Movies;
 
@@ -64,7 +65,9 @@ public class SearchCityMoviesHandler
                 imdbIds.Where(id => !stored.ContainsKey(id)).ToList(), cancellationToken);
 
             // Saved results are permanent, so an incomplete one must not be saved.
-            if (found.Partial) return new UnsavedOutcome(StatusCodes.Status200OK, PartialResponse(city, found.Movies));
+            if (found.Partial)
+                return new UnsavedOutcome(StatusCodes.Status200OK,
+                    PartialResponse(city, found.Movies, stored, siteIds));
 
             await store.SaveAsync(city, found.Movies, siteIds, cancellationToken);
             return null;
@@ -86,10 +89,18 @@ public class SearchCityMoviesHandler
                 : "Movie search is temporarily unavailable.");
     }
 
-    private static SearchCityMoviesResponse PartialResponse(CityInfo city, IReadOnlyList<FoundMovie> found) => new(
-        new SearchCityMoviesResponse.CityDetails(city.GeoNamesId, city.Name, city.Region, city.Country,
-            city.CountryCode),
-        Partial: true,
-        found.Select(f => new SearchCityMoviesResponse.MovieDetails(f.Movie.ImdbId, f.Movie.Title, f.Movie.Year,
-            f.Movie.Director, f.Movie.PosterUrl, f.Movie.Plot, f.Blurb)).ToList());
+    /// <summary>Shows each Movie as it is or would be stored, so its links match a later complete result.</summary>
+    private static SearchCityMoviesResponse PartialResponse(CityInfo city, IReadOnlyList<FoundMovie> found,
+        IReadOnlyDictionary<string, Movie> stored, IReadOnlyDictionary<string, MovieSiteIds> siteIds)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new SearchCityMoviesResponse(
+            new SearchCityMoviesResponse.CityDetails(city.GeoNamesId, city.Name, city.Region, city.Country,
+                city.CountryCode),
+            Partial: true,
+            found.Select(f => SearchCityMoviesResponse.MovieDetails.From(
+                stored.GetValueOrDefault(f.Movie.ImdbId) ??
+                CityMovieStore.NewMovie(f.Movie, siteIds.GetValueOrDefault(f.Movie.ImdbId), now),
+                f.Blurb)).ToList());
+    }
 }
